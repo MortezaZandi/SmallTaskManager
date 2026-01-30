@@ -116,7 +116,9 @@
     if (status === 1) return 'task-card-status-inprogress';
     if (status === 2) return 'task-card-status-done';
     return 'task-card-status-deleted';
-  }
+    }
+
+  function priorityStyle(p) { return p === 0 ? 'task-card-low' : p === 1 ? 'task-card-medium' : 'task-card-high'; }
   function priorityText(p) { return p === 0 ? 'Low' : p === 1 ? 'Medium' : 'High'; }
 
   function renderGroupTree(nodes, parentEl, level) {
@@ -174,7 +176,7 @@
               _group.value = g.groupId;
               loadTasks();
           });
-
+          div.innerHTML = '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="octicon octicon-chevron-right">    <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"></path></svg>  ' + g.name;
       ul.appendChild(div);
       if (g.children && g.children.length) renderGroupTree(g.children, ul, level + 1);
     });
@@ -264,14 +266,13 @@
         if (!col) return;
           col.innerHTML = '';
          Array.from(list).filter(t => t.status === status).forEach(task => {
-          const card = document.createElement('div');
-          card.className = 'task-card ' + statusClass(task.status);
+             const card = document.createElement('div');
+             card.className = 'task-card ' + priorityStyle(task.priority);
           card.dataset.taskId = task.taskId;
           card.innerHTML = `
-            <div class="task-card-number">#${task.taskNumber}</div>
-            <div class="task-card-title">${escapeHtml(task.title)}</div>
+            <div class="task-card-title" style="text-align:right">${escapeHtml(task.title)}</div>
             <div class="task-card-meta">
-              <div class="task-card-labels">${(task.taskLabels || []).map(tl => tl.label ? `<span class="task-card-label" style="background:${tl.label.color}20;color:${tl.label.color}">${escapeHtml(tl.label.name)}</span>` : '').join('')}</div>
+              <div class="task-card-labels">#${task.taskNumber} ${(task.taskLabels || []).map(tl => tl.label ? `<span class="task-card-label" style="background:${tl.label.color}20;color:${tl.label.color}">${escapeHtml(tl.label.name)}</span>` : '').join('')}</div>
               <span class="task-card-priority">${priorityText(task.priority)}</span>
               ${task.assignedUser ? `<img class="task-card-assigned" src="${escapeHtml(task.assignedUser.iconPath || '/favicon.ico')}" alt="" title="${escapeHtml(task.assignedUser.name)}" onerror="this.src='/favicon.ico'" />` : ''}
             </div>`;
@@ -292,7 +293,8 @@
             }
           });
           col.appendChild(card);
-        });
+         });
+          document.getElementById('taskCount' + status).innerHTML = Array.from(list).filter(t => t.status === status).length;
       });
     });
   }

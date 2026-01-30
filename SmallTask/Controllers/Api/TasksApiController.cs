@@ -34,7 +34,7 @@ public class TasksApiController : ControllerBase
             AssignedUserId = q.AssignedUserId,
             TaskNumber = q.TaskNumber
         };
-        var list = await _service.GetFilteredAsync(filter);
+        var list = (await _service.GetFilteredAsync(filter)).OrderByDescending(x=>x.CreatedAt);
         return Ok(list);
     }
 

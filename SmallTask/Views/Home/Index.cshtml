@@ -45,15 +45,24 @@
 
 <div class="board-container d-flex gap-3">
     <div class="board-column board-column-todo flex-grow-1" data-status="0">
-        <div class="board-column-header">Todo</div>
+        <div class="board-column-header" style="display: flex; justify-content: space-between;">
+            <span>Todo</span>
+            <span id="taskCount0">0</span>
+        </div>
         <div class="board-column-cards" id="columnTodo"></div>
     </div>
     <div class="board-column board-column-inprogress flex-grow-1" data-status="1">
-        <div class="board-column-header">In Progress</div>
+        <div class="board-column-header" style="display: flex; justify-content: space-between;">
+             <span>In Progress</span>
+             <span id="taskCount1">0</span>
+        </div>
         <div class="board-column-cards" id="columnInProgress"></div>
     </div>
     <div class="board-column board-column-done flex-grow-1" data-status="2">
-        <div class="board-column-header">Done</div>
+        <div class="board-column-header" style="display: flex; justify-content: space-between;">
+              <span>Done</span>
+             <span id="taskCount2">0</span>
+        </div>
         <div class="board-column-cards" id="columnDone"></div>
     </div>
 </div>
