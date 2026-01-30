@@ -1,0 +1,70 @@
+﻿@*@{
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}*@
+
+@*@model SmallTask.Pages.IndexModel*@
+@{
+    ViewData["Title"] = "Task Board";
+}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+    <div class="dropdown">
+        <button class="btn btn-sm btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">Task</button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" id="menuTaskCreate">Create task</a></li>
+            <li><a class="dropdown-item" href="#" id="menuTaskEdit">Edit task</a></li>
+            <li><a class="dropdown-item" href="#" id="menuTaskDelete">Delete task</a></li>
+        </ul>
+    </div>
+    <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Users</button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" id="menuUserCreate">Create user</a></li>
+            <li><a class="dropdown-item" href="#" id="menuUserEdit">Edit user</a></li>
+            <li><a class="dropdown-item" href="#" id="menuUserList">List users</a></li>
+        </ul>
+    </div>
+    <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Labels</button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" id="menuLabelCreate">Create label</a></li>
+            <li><a class="dropdown-item" href="#" id="menuLabelEdit">Edit label</a></li>
+            <li><a class="dropdown-item" href="#" id="menuLabelList">List labels</a></li>
+        </ul>
+    </div>
+
+    <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">Groups</button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" id="menuGroupCreate">Create group</a></li>
+            <li><a class="dropdown-item" href="#" id="menuGroupRename">Rename group</a></li>
+            <li><a class="dropdown-item" href="#" id="menuGroupDelete">Delete group</a></li>
+        </ul>
+    </div>
+</div>
+
+<div class="board-container d-flex gap-3">
+    <div class="board-column board-column-todo flex-grow-1" data-status="0">
+        <div class="board-column-header">Todo</div>
+        <div class="board-column-cards" id="columnTodo"></div>
+    </div>
+    <div class="board-column board-column-inprogress flex-grow-1" data-status="1">
+        <div class="board-column-header">In Progress</div>
+        <div class="board-column-cards" id="columnInProgress"></div>
+    </div>
+    <div class="board-column board-column-done flex-grow-1" data-status="2">
+        <div class="board-column-header">Done</div>
+        <div class="board-column-cards" id="columnDone"></div>
+    </div>
+</div>
+
+<div class="dropdown position-fixed bottom-0 end-0 m-3" id="statusMenuContainer" style="display:none;">
+    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Status</button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" data-status="0">Todo</a></li>
+        <li><a class="dropdown-item" href="#" data-status="1">In Progress</a></li>
+        <li><a class="dropdown-item" href="#" data-status="2">Done</a></li>
+        <li><hr class="dropdown-divider" /></li>
+        <li><a class="dropdown-item text-danger" href="#" data-status="delete">Delete task</a></li>
+    </ul>
+</div>
