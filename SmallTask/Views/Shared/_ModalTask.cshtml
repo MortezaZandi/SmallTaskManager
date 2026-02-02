@@ -7,46 +7,46 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="modalTaskId" />
-                <div class="row mb-2">
-                    <div class="col-md-8">
-                        <label class="form-label">Title</label>
-                        <input type="text" class="form-control" id="modalTaskTitle" style="text-align: right;" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Priority</label>
-                        <select class="form-select" id="modalTaskPriority">
-                            <option value="0">Low</option>
-                            <option value="1">Medium</option>
-                            <option value="2">High</option>
-                        </select>
-                    </div>
+                <div  style="text-align:right">
+                    <label class="form-label">عنوان</label>
+                    <input type="text" class="form-control" id="modalTaskTitle" style="text-align: right;" />
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Description</label>
-                    <textarea class="form-control" id="modalTaskDescription" rows="3" style="text-align: right;"></textarea>
+                <div style="text-align:right">
+                    <label class="form-label">شرح</label>
+                    <div id="modalTaskDescriptionEditor" class="border rounded bg-white" style="min-height: 140px;"></div>
                 </div>
-                <div class="row mb-2">
-                    <div class="col-md-4">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" id="modalTaskStatus">
-                            <option value="0">Todo</option>
-                            <option value="1">In Progress</option>
-                            <option value="2">Done</option>
-                        </select>
+                <div class="row mb-2 align-items-start">
+                    <div class="col-md-5">
+                        <div id="modalTaskLabelsList" class="border rounded p-2 bg-light" style="max-height: 140px; overflow-y: auto;"></div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Assigned user</label>
-                        <select class="form-select" id="modalTaskAssignedUser"><option value="">— None —</option></select>
+                    <div class="col-md-7">
+                        <div class="d-flex flex-column gap-2" style="text-align:right">
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm flex-grow-1" id="modalTaskStatus">
+                                    <option value="0">Todo</option>
+                                    <option value="1">In Progress</option>
+                                    <option value="2">Done</option>
+                                </select>
+                                <label class="form-label mb-0 text-muted small text-nowrap" style="min-width: 6rem;">وضعیت</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm flex-grow-1" id="modalTaskPriority">
+                                    <option value="0">Low</option>
+                                    <option value="1">Medium</option>
+                                    <option value="2">High</option>
+                                </select>
+                                <label class="form-label mb-0 text-muted small text-nowrap" style="min-width: 6rem;">اولویت</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm flex-grow-1" id="modalTaskGroup"><option value="">— None —</option></select>
+                                <label class="form-label mb-0 text-muted small text-nowrap" style="min-width: 6rem;">گروه</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm flex-grow-1" id="modalTaskAssignedUser"><option value="">— None —</option></select>
+                                <label class="form-label mb-0 text-muted small text-nowrap" style="min-width: 6rem;">انتساب به</label>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Group</label>
-                        <select class="form-select" id="modalTaskGroup"><option value="">— None —</option></select>
-                    </div>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Labels</label>
-                    <select class="form-select" id="modalTaskLabels" multiple size="4"></select>
-                    <small class="text-muted">Hold Ctrl to select multiple</small>
                 </div>
                 <hr />
                 <div class="mb-2">

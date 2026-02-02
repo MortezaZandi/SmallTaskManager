@@ -72,6 +72,61 @@
     filter: getStoredFilter()
   };
 
+  let taskDescriptionQuill = null;
+  function initTaskDescriptionEditor() {
+    const el = document.getElementById('modalTaskDescriptionEditor');
+    if (!el || taskDescriptionQuill || typeof Quill === 'undefined') return;
+    taskDescriptionQuill = new Quill('#modalTaskDescriptionEditor', {
+      theme: 'snow',
+      placeholder: 'Enter description...',
+      modules: {
+        toolbar: [
+          [{ header: [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ color: [] }, { background: [] }],
+          [{ align: [] }],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['link'],
+          ['clean']
+        ]
+      }
+    });
+  }
+  function getTaskDescriptionHtml() {
+    if (!taskDescriptionQuill) return null;
+    const html = taskDescriptionQuill.root.innerHTML.trim();
+    if (!html || html === '<p><br></p>' || html === '<p></p>') return null;
+    return html;
+  }
+  function setTaskDescriptionHtml(html) {
+    if (!taskDescriptionQuill) return;
+    taskDescriptionQuill.clipboard.dangerouslyPasteHTML(html || '<p><br></p>');
+  }
+  function renderTaskLabelCheckboxes(selectedLabelIds) {
+    const container = document.getElementById('modalTaskLabelsList');
+    if (!container) return;
+    container.innerHTML = '';
+    Array.from(state.labels).forEach(l => {
+      const label = document.createElement('label');
+      label.className = 'd-flex align-items-center gap-2 mb-1 form-check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'form-check-input';
+      cb.value = l.labelId;
+      if (selectedLabelIds.indexOf(l.labelId) !== -1) cb.checked = true;
+      const span = document.createElement('span');
+      span.className = 'form-check-label';
+      span.style.color = l.color || '#333';
+      span.textContent = l.name;
+      label.appendChild(cb);
+      label.appendChild(span);
+      container.appendChild(label);
+    });
+    if (state.labels.length === 0) {
+      container.innerHTML = '<span class="text-muted small">No labels. Create labels from the Labels menu.</span>';
+    }
+  }
+
   function getStoredFilter() {
     try {
       const s = localStorage.getItem('smallTask_filter');
@@ -119,7 +174,23 @@
     }
 
   function priorityStyle(p) { return p === 0 ? 'task-card-low' : p === 1 ? 'task-card-medium' : 'task-card-high'; }
-  function priorityText(p) { return p === 0 ? 'Low' : p === 1 ? 'Medium' : 'High'; }
+  function priorityText(p) { return p === 0 ? 'کم' : p === 1 ? 'متوسط' : 'بالا'; }
+  function statusText(s) { return s === 0 ? 'انجام نشده' : s === 1 ? 'درحال انجام' : s === 2 ? 'انجام شده' : 'حذف شده'; }
+  function formatCreatedAt(createdAt) {
+    const d = new Date(createdAt);
+    const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    let ago = '';
+    if (diffMins < 1) ago = 'هم اکنون';
+    else if (diffMins < 60) ago = diffMins + ' دقیقه قبل';
+    else if (diffHours < 24) ago = diffHours + ' ساعت قبل';
+    else ago = diffDays + ' روز قبل';
+    return ago;
+  }
 
   function renderGroupTree(nodes, parentEl, level) {
     if (!nodes || !nodes.length) return;
@@ -279,7 +350,7 @@
           card.addEventListener('click', function (e) {
             if (e.target.closest('.task-card-status-menu-trigger')) return;
             state.selectedTaskId = task.taskId;
-            openTaskModal(task.taskId);
+            openTaskDetailsModal(task.taskId);
           });
           card.addEventListener('contextmenu', function (e) {
             e.preventDefault();
@@ -306,23 +377,62 @@
     return d.innerHTML;
   }
 
+  function openTaskDetailsModal(taskId) {
+    if (!taskId) return;
+    api.tasks.get(taskId).then(task => {
+      if (!task) return;
+      document.getElementById('modalTaskDetailsId').value = task.taskId;
+      document.getElementById('modalTaskDetailsHeader').textContent = 'Task #' + task.taskNumber + ' – Details';
+      document.getElementById('modalTaskDetailsTitle').textContent = task.title || '';
+      const createdAtEl = document.getElementById('modalTaskDetailsCreatedAt');
+      if (task.createdAt) {
+        createdAtEl.textContent = formatCreatedAt(task.createdAt);
+      } else {
+        createdAtEl.textContent = '—';
+      }
+      const descEl = document.getElementById('modalTaskDetailsDescription');
+      if (task.description && task.description.trim()) {
+        descEl.innerHTML = task.description;
+      } else {
+        descEl.textContent = '—';
+      }
+      document.getElementById('modalTaskDetailsStatus').textContent = statusText(task.status);
+      document.getElementById('modalTaskDetailsPriority').textContent = priorityText(task.priority);
+      document.getElementById('modalTaskDetailsAssignedUser').innerHTML = task.assignedUser
+        ? `<img src="${escapeHtml(task.assignedUser.iconPath || '/favicon.ico')}" alt="" class="me-1" style="width:20px;height:20px;border-radius:50%;" onerror="this.src='/favicon.ico'" /> ${escapeHtml(task.assignedUser.name)}`
+        : '—';
+      document.getElementById('modalTaskDetailsGroup').textContent = (task.group && task.group.name) ? task.group.name : '—';
+      const labelsHtml = (task.taskLabels || []).filter(tl => tl.label).map(tl =>
+        `<span class="task-card-label me-1" style="background:${tl.label.color}20;color:${tl.label.color}">${escapeHtml(tl.label.name)}</span>`
+      ).join('') || '—';
+      document.getElementById('modalTaskDetailsLabels').innerHTML = labelsHtml;
+      api.comments.byTask(taskId).then(comments => {
+        const list = document.getElementById('modalTaskDetailsCommentsList');
+        list.innerHTML = comments.length
+          ? comments.map(c => `<div class="comment-item small mb-2"><div class="text-muted">${escapeHtml((c.user && c.user.name) || '')} · ${new Date(c.createdAt).toLocaleString()}</div><div>${escapeHtml(c.text)}</div></div>`).join('')
+          : '<div class="text-muted small">No comments.</div>';
+      });
+      api.attachments.byTask(taskId).then(attachments => {
+        const list = document.getElementById('modalTaskDetailsAttachmentsList');
+        list.innerHTML = attachments.length
+          ? attachments.map(a => `<div class="attachment-item small mb-1"><a href="${api.attachments.downloadUrl(a.attachmentId)}" target="_blank" download="${escapeHtml(a.originalFileName)}">${escapeHtml(a.originalFileName)}</a></div>`).join('')
+          : '<div class="text-muted small">No attachments.</div>';
+      });
+      new bootstrap.Modal(document.getElementById('modalTaskDetails')).show();
+    });
+  }
+
   function openTaskModal(taskId) {
     if (!taskId) {
       document.getElementById('modalTaskHeader').textContent = 'Create Task';
       document.getElementById('modalTaskId').value = '';
       document.getElementById('modalTaskTitle').value = '';
-      document.getElementById('modalTaskDescription').value = '';
+      setTaskDescriptionHtml('');
       document.getElementById('modalTaskPriority').value = '1';
       document.getElementById('modalTaskStatus').value = '0';
       document.getElementById('modalTaskAssignedUser').value = '';
       document.getElementById('modalTaskGroup').value = '';
-        document.getElementById('modalTaskLabels').innerHTML = '';
-        Array.from(state.labels).forEach(l => {
-        const opt = document.createElement('option');
-        opt.value = l.labelId;
-        opt.textContent = l.name;
-        document.getElementById('modalTaskLabels').appendChild(opt);
-      });
+      renderTaskLabelCheckboxes([]);
       document.getElementById('modalTaskCommentsList').innerHTML = '';
       document.getElementById('modalTaskAttachmentsList').innerHTML = '';
       new bootstrap.Modal(document.getElementById('modalTask')).show();
@@ -334,20 +444,13 @@
       document.getElementById('modalTaskHeader').textContent = 'Edit Task';
       document.getElementById('modalTaskId').value = task.taskId;
       document.getElementById('modalTaskTitle').value = task.title;
-      document.getElementById('modalTaskDescription').value = task.description || '';
+      setTaskDescriptionHtml(task.description || '');
       document.getElementById('modalTaskPriority').value = String(task.priority);
       document.getElementById('modalTaskStatus').value = String(task.status);
       document.getElementById('modalTaskAssignedUser').value = task.assignedUserId != null ? String(task.assignedUserId) : '';
       document.getElementById('modalTaskGroup').value = task.groupId != null ? String(task.groupId) : '';
-      const labelsEl = document.getElementById('modalTaskLabels');
-        labelsEl.innerHTML = '';
-        Array.from(state.labels).forEach(l => {
-        const opt = document.createElement('option');
-        opt.value = l.labelId;
-        opt.textContent = l.name;
-        opt.selected = (task.taskLabels || []).some(tl => tl.labelId === l.labelId);
-        labelsEl.appendChild(opt);
-      });
+      const selectedLabelIds = (task.taskLabels || []).map(tl => tl.labelId);
+      renderTaskLabelCheckboxes(selectedLabelIds);
       loadGroupOptions('modalTaskGroup', task.groupId);
       api.comments.byTask(taskId).then(comments => {
         const list = document.getElementById('modalTaskCommentsList');
@@ -384,13 +487,12 @@
     const titleEl = document.getElementById('modalTaskTitle');
     const title = titleEl ? titleEl.value.trim() : '';
     if (!title) { alert('Title is required.'); return; }
-    const description = document.getElementById('modalTaskDescription').value.trim() || null;
+    const description = getTaskDescriptionHtml();
     const priority = parseInt(document.getElementById('modalTaskPriority').value, 10);
     const status = parseInt(document.getElementById('modalTaskStatus').value, 10);
     const assignedUserId = document.getElementById('modalTaskAssignedUser').value ? parseInt(document.getElementById('modalTaskAssignedUser').value, 10) : null;
     const groupId = document.getElementById('modalTaskGroup').value ? parseInt(document.getElementById('modalTaskGroup').value, 10) : null;
-    const labelOpts = document.getElementById('modalTaskLabels').selectedOptions;
-    const labelIds = Array.from(labelOpts).map(o => parseInt(o.value, 10));
+    const labelIds = Array.from(document.querySelectorAll('#modalTaskLabelsList input[type="checkbox"]:checked')).map(cb => parseInt(cb.value, 10));
     const data = { title, description, status, priority, assignedUserId, groupId, labelIds };
     if (!id) {
       api.tasks.create(data).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalTask')).hide(); loadTasks(); }).catch(e => alert(e));
@@ -470,6 +572,23 @@
 
   document.getElementById('modalTaskSave')?.addEventListener('click', saveTaskModal);
 
+  document.getElementById('modalTaskDetailsEdit')?.addEventListener('click', function () {
+    const taskId = document.getElementById('modalTaskDetailsId').value;
+    if (!taskId) return;
+    bootstrap.Modal.getInstance(document.getElementById('modalTaskDetails')).hide();
+    openTaskModal(parseInt(taskId, 10));
+  });
+  document.getElementById('modalTaskDetailsDelete')?.addEventListener('click', function () {
+    const taskId = document.getElementById('modalTaskDetailsId').value;
+    if (!taskId) return;
+    if (!confirm('Delete this task?')) return;
+    api.tasks.delete(parseInt(taskId, 10)).then(() => {
+      bootstrap.Modal.getInstance(document.getElementById('modalTaskDetails')).hide();
+      state.selectedTaskId = null;
+      loadTasks();
+    }).catch(e => alert(e));
+  });
+
   document.getElementById('modalLabelSave')?.addEventListener('click', function () {
     const id = document.getElementById('modalLabelId').value;
     const name = document.getElementById('modalLabelName').value.trim();
@@ -509,6 +628,7 @@
 
   document.addEventListener('click', function () { document.getElementById('statusMenuContainer').style.display = 'none'; });
 
+  initTaskDescriptionEditor();
   setFilterToInputs(state.filter);
   loadGroupsTree().then(() => { loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); });
   loadUsers();

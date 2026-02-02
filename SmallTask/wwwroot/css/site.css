@@ -145,3 +145,24 @@ body {
 .comment-item:last-child { border-bottom: none; }
 .comment-item-header { font-size: 0.85rem; color: #666; }
 .attachment-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+
+/* Task description Quill editor - RTL and larger default font */
+#modalTaskDescriptionEditor .ql-editor {
+  font-family: inherit;
+  direction: rtl;
+  text-align: right;
+  font-size: 1.25rem;
+}
+
+/* Task detail description - rich text (Quill) output */
+.task-detail-description { font-size: 0.95rem; line-height: 1.5; }
+.task-detail-description p { margin: 0 0 0.5em; }
+.task-detail-description p:last-child { margin-bottom: 0; }
+.task-detail-description h1, .task-detail-description h2, .task-detail-description h3 { margin: 0.6em 0 0.3em; font-weight: 600; }
+.task-detail-description ul, .task-detail-description ol { margin: 0.25em 0; padding-left: 1.5em; }
+.task-detail-description a { color: #0d6efd; }
+.task-detail-description strong { font-weight: 600; }
+.task-detail-description em { font-style: italic; }
+.task-detail-description .ql-align-center { text-align: center; }
+.task-detail-description .ql-align-right { text-align: right; }
+.task-detail-description .ql-align-justify { text-align: justify; }

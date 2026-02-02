@@ -1,0 +1,67 @@
+<div class="modal fade" id="modalTaskDetails" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTaskDetailsHeader">Task Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="text-align: right;">
+                <input type="hidden" id="modalTaskDetailsId" />
+                <div style="text-align:right">
+                    <div>
+                        <div id="modalTaskDetailsTitle" class="fw-semibold" style="text-align: right;"></div>
+                    </div>
+                </div>
+                <br/>
+                <div class="mb-2">
+                    <div id="modalTaskDetailsDescription" class="task-detail-description border rounded p-2 bg-light" style="min-height: 2em;"></div>
+                </div>
+                
+                <div class="row mb-2 align-items-start">
+                    <div class="col-md-5">
+                        <label class="form-label text-muted small">لیبل</label>
+                        <div id="modalTaskDetailsLabels" class="d-flex flex-wrap gap-1 flex-column"></div>
+                    </div>
+                    <div class="col-md-7 d-flex flex-column align-items-end">
+                        <div class="d-flex flex-column gap-2 align-items-end">
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="modalTaskDetailsStatus"></span>
+                                <span class="text-muted small text-nowrap" style="min-width: 6rem;">وضعیت</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="modalTaskDetailsPriority"></span>
+                                <span class="text-muted small text-nowrap" style="min-width: 6rem;">اولویت</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="modalTaskDetailsGroup"></span>
+                                <span class="text-muted small text-nowrap" style="min-width: 6rem;">گروه</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="modalTaskDetailsAssignedUser"></span>
+                                <span class="text-muted small text-nowrap" style="min-width: 6rem;">انتساب به</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr />
+                <div class="mb-2">
+                    <label class="form-label text-muted small">یادداشت ها</label>
+                    <div id="modalTaskDetailsCommentsList" class="border rounded p-2 mb-2 bg-light" style="max-height:120px; overflow-y:auto;"></div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label text-muted small">پیوست ها</label>
+                    <div id="modalTaskDetailsAttachmentsList" class="border rounded p-2 mb-2 bg-light" style="max-height:100px; overflow-y:auto;"></div>
+                </div>
+                <div class="mb-2">
+                    <span class="text-muted small">تاریخ ایجاد: </span>
+                    <span id="modalTaskDetailsCreatedAt"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="modalTaskDetailsDelete">Delete</button>
+                <button type="button" class="btn btn-primary" id="modalTaskDetailsEdit">Edit</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
