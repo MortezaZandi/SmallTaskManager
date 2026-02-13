@@ -57,9 +57,10 @@
         if (q.taskNumber) params.set('taskNumber', q.taskNumber);
         return fetch('/api/tasks/filtered?' + params).then(r => r.json());
       },
-      create: (data) => fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.message || e))),
-      update: (id, data) => fetch(`/api/tasks/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e.message || e)); }),
-      delete: id => fetch(`/api/tasks/${id}`, { method: 'DELETE' }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e)); })
+      _h: () => { const h = { 'Content-Type': 'application/json' }; if (state.currentUserId) h['X-Activity-User-Id'] = state.currentUserId; return h; },
+      create: (data) => fetch('/api/tasks', { method: 'POST', headers: api.tasks._h(), body: JSON.stringify(data) }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.message || e))),
+      update: (id, data) => fetch(`/api/tasks/${id}`, { method: 'PUT', headers: api.tasks._h(), body: JSON.stringify(data) }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e.message || e)); }),
+      delete: id => fetch(`/api/tasks/${id}`, { method: 'DELETE', headers: state.currentUserId ? { 'X-Activity-User-Id': state.currentUserId } : {} }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e)); })
     },
     comments: {
       byTask: taskId => fetch(`/api/comments/task/${taskId}`).then(r => r.json()),
@@ -77,6 +78,19 @@
       },
       delete: id => fetch(`/api/attachments/${id}`, { method: 'DELETE' }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e)); }),
       downloadUrl: id => `/api/attachments/${id}/download`
+    },
+    activityLogs: {
+      list: (projectId, userId, taskId, taskNumber, page, pageSize) => {
+        const params = new URLSearchParams();
+        if (projectId) params.set('projectId', projectId);
+        if (userId) params.set('userId', userId);
+        if (taskId) params.set('taskId', taskId);
+        if (taskNumber) params.set('taskNumber', taskNumber);
+        params.set('page', page || 1);
+        params.set('pageSize', pageSize || 100);
+        return fetch('/api/activity-logs?' + params).then(r => r.json());
+      },
+      lastByTasks: taskIds => fetch('/api/activity-logs/last-by-tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(taskIds || []) }).then(r => r.json())
     }
   };
 
@@ -359,7 +373,7 @@
         if (!s) return;
         const current = s.value;
         s.innerHTML = '<option value="">— None —</option>';
-          Array.from(list).forEach(u => {
+        Array.from(list).forEach(u => {
           const opt = document.createElement('option');
           opt.value = u.userId;
           opt.textContent = u.name;
@@ -369,6 +383,56 @@
       });
       return list;
     });
+  }
+
+  function updateUserLoginUI() {
+    const loggedInArea = document.getElementById('userLoggedInArea');
+    const nameEl = document.getElementById('userLoggedInName');
+    if (!loggedInArea) return;
+    if (state.currentUserId) {
+      const user = state.users?.find(u => u.userId === state.currentUserId);
+      loggedInArea.style.display = '';
+      if (nameEl) nameEl.textContent = user ? user.name : 'User';
+    } else {
+      loggedInArea.style.display = 'none';
+    }
+  }
+
+  function doLogin(userId) {
+    const id = parseInt(userId, 10);
+    if (!id) return;
+    state.currentUserId = id;
+    localStorage.setItem('smallTask_currentUserId', String(id));
+    updateUserLoginUI();
+  }
+
+  function doLogout() {
+    state.currentUserId = null;
+    localStorage.removeItem('smallTask_currentUserId');
+    updateUserLoginUI();
+    if (state.users && state.users.length > 0) showUserSelectModal(false);
+  }
+
+  function showUserSelectModal(allowClose) {
+    const listEl = document.getElementById('modalLoginUserList');
+    const closeBtn = document.getElementById('modalLoginClose');
+    if (!listEl) return;
+    closeBtn.style.display = allowClose ? '' : 'none';
+    listEl.innerHTML = '';
+    const users = state.users || [];
+    if (users.length === 0) {
+      listEl.innerHTML = '<div class="text-muted small">No users yet. Create one from the Users menu.</div>';
+    } else {
+      users.forEach(u => {
+        const a = document.createElement('a');
+        a.href = '#';
+        a.className = 'list-group-item list-group-item-action d-flex align-items-center gap-2';
+        a.innerHTML = `<img src="${escapeHtml(u.iconPath || '/favicon.ico')}" alt="" class="rounded-circle flex-shrink-0" style="width:32px;height:32px;object-fit:cover;" onerror="this.src='/favicon.ico'" /><span>${escapeHtml(u.name || '')}</span>`;
+        a.addEventListener('click', function (e) { e.preventDefault(); doLogin(u.userId); bootstrap.Modal.getInstance(document.getElementById('modalLogin'))?.hide(); });
+        listEl.appendChild(a);
+      });
+    }
+    new bootstrap.Modal(document.getElementById('modalLogin')).show();
   }
 
   function updateProjectHeaderIcon() {
@@ -468,6 +532,7 @@
               <div class="task-card-labels">#${task.taskNumber} ${(task.taskLabels || []).map(tl => tl.label ? `<span class="task-card-label" style="background:${tl.label.color}20;color:${tl.label.color}">${escapeHtml(tl.label.name)}</span>` : '').join('')}</div>
               <span class="task-card-priority">${priorityText(task.priority)}</span>
               ${task.assignedUser ? `<img class="task-card-assigned" src="${escapeHtml(task.assignedUser.iconPath || '/favicon.ico')}" alt="" title="${escapeHtml(task.assignedUser.name)}" onerror="this.src='/favicon.ico'" />` : ''}
+              <span class="task-card-last-action text-muted small ms-auto" data-task-id="${task.taskId}"></span>
             </div>`;
           card.addEventListener('click', function (e) {
             if (e.target.closest('.task-card-status-menu-trigger')) return;
@@ -489,6 +554,18 @@
          });
           document.getElementById('taskCount' + status).innerHTML = Array.from(list).filter(t => t.status === status).length;
       });
+      const taskIds = list.map(t => t.taskId);
+      if (taskIds.length > 0) {
+        api.activityLogs.lastByTasks(taskIds).then(lastByTask => {
+          Object.entries(lastByTask).forEach(([tid, log]) => {
+            const el = document.querySelector(`.task-card-last-action[data-task-id="${tid}"]`);
+            if (el && log) {
+              const uname = log.userName || 'Unknown';
+              el.textContent = log.actionDetails ? `${log.actionDetails} by ${uname}` : '';
+            }
+          });
+        }).catch(() => {});
+      }
       initColumnDropTargets();
     });
   }
@@ -560,8 +637,13 @@
       api.comments.byTask(taskId).then(comments => {
         const list = document.getElementById('modalTaskDetailsCommentsList');
         list.innerHTML = comments.length
-          ? comments.map(c => `<div class="comment-item small mb-2"><div class="text-muted">${escapeHtml((c.user && c.user.name) || '')} · ${new Date(c.createdAt).toLocaleString()}</div><div>${escapeHtml(c.text)}</div></div>`).join('')
+          ? comments.map(c => `<div class="comment-item small mb-2 d-flex justify-content-between align-items-start"><div><div class="text-muted">${escapeHtml((c.user && c.user.name) || '')} · ${new Date(c.createdAt).toLocaleString()}</div><div>${escapeHtml(c.text)}</div></div><button type="button" class="btn btn-sm btn-outline-danger delete-comment-details" data-id="${c.commentId}">Delete</button></div>`).join('')
           : '<div class="text-muted small">No comments.</div>';
+        list.querySelectorAll('.delete-comment-details').forEach(btn => {
+          btn.addEventListener('click', function () {
+            msg.confirm('Delete this comment?').then(confirmed => { if (!confirmed) return; api.comments.delete(parseInt(this.dataset.id, 10)).then(() => refreshTaskDetailsModalComments(taskId)).catch(e => msg.error(e)); });
+          });
+        });
       });
       api.attachments.byTask(taskId).then(attachments => {
         const list = document.getElementById('modalTaskDetailsAttachmentsList');
@@ -569,7 +651,67 @@
           ? attachments.map(a => `<div class="attachment-item small mb-1"><a href="${api.attachments.downloadUrl(a.attachmentId)}" target="_blank" download="${escapeHtml(a.originalFileName)}">${escapeHtml(a.originalFileName)}</a></div>`).join('')
           : '<div class="text-muted small">No attachments.</div>';
       });
+      api.activityLogs.list(null, null, taskId, null, 1, 50).then(r => {
+        const el = document.getElementById('modalTaskDetailsActivityLog');
+        if (!el) return;
+        const items = r.items || [];
+        el.innerHTML = items.length
+          ? items.map(l => `<div class="small mb-1">${escapeHtml(l.actionDetails || '')} ${l.userName ? 'by ' + escapeHtml(l.userName) : ''} · ${new Date(l.date).toLocaleString()}</div>`).join('')
+          : '<div class="text-muted small">No activity.</div>';
+      }).catch(() => {});
       new bootstrap.Modal(document.getElementById('modalTaskDetails')).show();
+    });
+  }
+
+  function refreshTaskModalCommentsAndAttachments(taskId) {
+    if (!taskId) return;
+    api.comments.byTask(taskId).then(comments => {
+      const list = document.getElementById('modalTaskCommentsList');
+      if (!list) return;
+      list.innerHTML = '';
+      Array.from(comments).forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'comment-item d-flex justify-content-between align-items-start';
+        div.innerHTML = `<div><div class="comment-item-header text-muted small">${escapeHtml((c.user && c.user.name) || '')} · ${new Date(c.createdAt).toLocaleString()}</div><div>${escapeHtml(c.text)}</div></div><button type="button" class="btn btn-sm btn-outline-danger delete-comment" data-id="${c.commentId}">Delete</button>`;
+        list.appendChild(div);
+      });
+      list.querySelectorAll('.delete-comment').forEach(btn => {
+        btn.addEventListener('click', function () {
+          msg.confirm('Delete this comment?').then(confirmed => { if (!confirmed) return; api.comments.delete(parseInt(this.dataset.id, 10)).then(() => refreshTaskModalCommentsAndAttachments(taskId)).catch(e => msg.error(e)); });
+        });
+      });
+    });
+    api.attachments.byTask(taskId).then(attachments => {
+      const list = document.getElementById('modalTaskAttachmentsList');
+      if (!list) return;
+      list.innerHTML = '';
+      Array.from(attachments).forEach(a => {
+        const div = document.createElement('div');
+        div.className = 'attachment-item';
+        div.innerHTML = `<a href="${api.attachments.downloadUrl(a.attachmentId)}" target="_blank" download="${escapeHtml(a.originalFileName)}">${escapeHtml(a.originalFileName)}</a> <button type="button" class="btn btn-sm btn-outline-danger delete-attachment" data-id="${a.attachmentId}">Delete</button>`;
+        list.appendChild(div);
+      });
+      list.querySelectorAll('.delete-attachment').forEach(btn => {
+        btn.addEventListener('click', function () {
+          msg.confirm('Delete this attachment?').then(confirmed => { if (!confirmed) return; api.attachments.delete(parseInt(this.dataset.id, 10)).then(() => refreshTaskModalCommentsAndAttachments(taskId)).catch(e => msg.error(e)); });
+        });
+      });
+    });
+  }
+
+  function refreshTaskDetailsModalComments(taskId) {
+    if (!taskId) return;
+    api.comments.byTask(taskId).then(comments => {
+      const list = document.getElementById('modalTaskDetailsCommentsList');
+      if (!list) return;
+      list.innerHTML = comments.length
+        ? comments.map(c => `<div class="comment-item small mb-2 d-flex justify-content-between align-items-start"><div><div class="text-muted">${escapeHtml((c.user && c.user.name) || '')} · ${new Date(c.createdAt).toLocaleString()}</div><div>${escapeHtml(c.text)}</div></div><button type="button" class="btn btn-sm btn-outline-danger delete-comment-details" data-id="${c.commentId}">Delete</button></div>`).join('')
+        : '<div class="text-muted small">No comments.</div>';
+      list.querySelectorAll('.delete-comment-details').forEach(btn => {
+        btn.addEventListener('click', function () {
+          msg.confirm('Delete this comment?').then(confirmed => { if (!confirmed) return; api.comments.delete(parseInt(this.dataset.id, 10)).then(() => refreshTaskDetailsModalComments(taskId)).catch(e => msg.error(e)); });
+        });
+      });
     });
   }
 
@@ -609,31 +751,7 @@
         renderTaskLabelCheckboxes(selectedLabelIds);
       });
       loadGroupOptions('modalTaskGroup', null, task.projectId);
-      api.comments.byTask(taskId).then(comments => {
-        const list = document.getElementById('modalTaskCommentsList');
-        list.innerHTML = '';
-          Array.from(comments).forEach(c => {
-          const div = document.createElement('div');
-          div.className = 'comment-item';
-          div.innerHTML = `<div class="comment-item-header">${escapeHtml((c.user && c.user.name) || '')} · ${new Date(c.createdAt).toLocaleString()}</div><div>${escapeHtml(c.text)}</div>`;
-          list.appendChild(div);
-        });
-      });
-      api.attachments.byTask(taskId).then(attachments => {
-        const list = document.getElementById('modalTaskAttachmentsList');
-        list.innerHTML = '';
-          Array.from(attachments).forEach(a => {
-          const div = document.createElement('div');
-          div.className = 'attachment-item';
-          div.innerHTML = `<a href="${api.attachments.downloadUrl(a.attachmentId)}" target="_blank" download="${escapeHtml(a.originalFileName)}">${escapeHtml(a.originalFileName)}</a> <button type="button" class="btn btn-sm btn-outline-danger delete-attachment" data-id="${a.attachmentId}">Delete</button>`;
-          list.appendChild(div);
-        });
-        list.querySelectorAll('.delete-attachment').forEach(btn => {
-          btn.addEventListener('click', function () {
-            msg.confirm('Delete this attachment?').then(confirmed => { if (!confirmed) return; api.attachments.delete(parseInt(this.dataset.id, 10)).then(() => openTaskModal(taskId)).catch(e => msg.error(e)); });
-          });
-        });
-      });
+      refreshTaskModalCommentsAndAttachments(taskId);
       new bootstrap.Modal(document.getElementById('modalTask')).show();
     });
   }
@@ -678,13 +796,13 @@
     if (id) {
       api.comments.update(parseInt(id, 10), text).then(() => {
         bootstrap.Modal.getInstance(document.getElementById('modalComment')).hide();
-        openTaskModal(taskId);
+        refreshTaskModalCommentsAndAttachments(taskId);
       }).catch(e => msg.error(e));
     } else {
       if (!state.currentUserId) { msg.warning('Select a user to post comments.'); return; }
       api.comments.create(taskId, state.currentUserId, text).then(() => {
         bootstrap.Modal.getInstance(document.getElementById('modalComment')).hide();
-        openTaskModal(taskId);
+        refreshTaskModalCommentsAndAttachments(taskId);
       }).catch(e => msg.error(e));
     }
   });
@@ -700,7 +818,7 @@
     if (!file || !taskId) return;
     api.attachments.upload(parseInt(taskId, 10), file).then(() => {
       this.value = '';
-      openTaskModal(parseInt(taskId, 10));
+      refreshTaskModalCommentsAndAttachments(parseInt(taskId, 10));
     }).catch(e => msg.error(e));
   });
 
@@ -770,7 +888,13 @@
     if (!name) { msg.warning('Name is required.'); return; }
     const iconPath = document.getElementById('modalUserIconPath').value.trim() || null;
     if (!id) {
-      api.users.create(name, iconPath).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide(); loadUsers(); }).catch(e => msg.error(e));
+      const wasFirstUser = !state.users || state.users.length === 0;
+      api.users.create(name, iconPath).then((newUser) => {
+        bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide();
+        return loadUsers().then(() => {
+          if (wasFirstUser && newUser?.userId) doLogin(newUser.userId);
+        });
+      }).catch(e => msg.error(e));
     } else {
       api.users.update(parseInt(id, 10), name, iconPath).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide(); loadUsers(); }).catch(e => msg.error(e));
     }
@@ -886,8 +1010,10 @@
     this.value = '';
   });
 
+  document.getElementById('btnUserLogout')?.addEventListener('click', function (e) { e.preventDefault(); doLogout(); });
+  document.getElementById('btnUserChange')?.addEventListener('click', function (e) { e.preventDefault(); showUserSelectModal(true); });
   document.getElementById('menuUserCreate')?.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('modalUserId').value = ''; document.getElementById('modalUserName').value = ''; document.getElementById('modalUserIconPath').value = ''; document.getElementById('modalUserTitle').textContent = 'Create User'; new bootstrap.Modal(document.getElementById('modalUser')).show(); });
-  document.getElementById('menuUserList')?.addEventListener('click', function (e) { e.preventDefault(); api.users.listWithTaskCounts().then(users => { const el = document.getElementById('listUsersContent'); el.innerHTML = Array.from(users).map(u => `<div class="d-flex align-items-center gap-2 py-2 border-bottom"><img src="${escapeHtml(u.iconPath || '/favicon.ico')}" alt="" class="rounded-circle flex-shrink-0" style="width:32px;height:32px;object-fit:cover;" onerror="this.src='/favicon.ico'" /><div class="flex-grow-1"><div class="fw-semibold">${escapeHtml(u.name)}</div><div class="small text-muted">Todo: ${u.taskCountTodo ?? 0} · In progress: ${u.taskCountInProgress ?? 0} · Done: ${u.taskCountDone ?? 0}</div></div><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary edit-user-btn" data-user-id="${u.userId}">Edit</button><button class="btn btn-sm btn-outline-danger delete-user-btn" data-user-id="${u.userId}">Delete</button><button class="btn btn-sm btn-outline-secondary use-user-btn" data-user-id="${u.userId}">Use as comment author</button></div></div>`).join(''); el.querySelectorAll('.edit-user-btn').forEach(btn => btn.addEventListener('click', function () { const id = parseInt(this.dataset.userId, 10); api.users.get(id).then(usr => { if (!usr) return; document.getElementById('modalUserId').value = usr.userId; document.getElementById('modalUserName').value = usr.name || ''; document.getElementById('modalUserIconPath').value = usr.iconPath || ''; document.getElementById('modalUserTitle').textContent = 'Edit User'; bootstrap.Modal.getInstance(document.getElementById('modalListUsers')).hide(); new bootstrap.Modal(document.getElementById('modalUser')).show(); }); })); el.querySelectorAll('.delete-user-btn').forEach(btn => btn.addEventListener('click', function () { const id = parseInt(this.dataset.userId, 10); msg.confirm('Delete this user?').then(confirmed => { if (!confirmed) return; api.users.delete(id).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalListUsers')).hide(); loadUsers(); }).catch(e => msg.error(e)); }); })); el.querySelectorAll('.use-user-btn').forEach(btn => btn.addEventListener('click', function () { state.currentUserId = parseInt(this.dataset.userId, 10); localStorage.setItem('smallTask_currentUserId', state.currentUserId); bootstrap.Modal.getInstance(document.getElementById('modalListUsers')).hide(); })); new bootstrap.Modal(document.getElementById('modalListUsers')).show(); }); });
+  document.getElementById('menuUserList')?.addEventListener('click', function (e) { e.preventDefault(); api.users.listWithTaskCounts().then(users => { const el = document.getElementById('listUsersContent'); el.innerHTML = Array.from(users).map(u => `<div class="d-flex align-items-center gap-2 py-2 border-bottom"><img src="${escapeHtml(u.iconPath || '/favicon.ico')}" alt="" class="rounded-circle flex-shrink-0" style="width:32px;height:32px;object-fit:cover;" onerror="this.src='/favicon.ico'" /><div class="flex-grow-1"><div class="fw-semibold">${escapeHtml(u.name)}</div><div class="small text-muted">Todo: ${u.taskCountTodo ?? 0} · In progress: ${u.taskCountInProgress ?? 0} · Done: ${u.taskCountDone ?? 0}</div></div><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary edit-user-btn" data-user-id="${u.userId}">Edit</button><button class="btn btn-sm btn-outline-danger delete-user-btn" data-user-id="${u.userId}">Delete</button></div></div>`).join(''); el.querySelectorAll('.edit-user-btn').forEach(btn => btn.addEventListener('click', function () { const id = parseInt(this.dataset.userId, 10); api.users.get(id).then(usr => { if (!usr) return; document.getElementById('modalUserId').value = usr.userId; document.getElementById('modalUserName').value = usr.name || ''; document.getElementById('modalUserIconPath').value = usr.iconPath || ''; document.getElementById('modalUserTitle').textContent = 'Edit User'; bootstrap.Modal.getInstance(document.getElementById('modalListUsers')).hide(); new bootstrap.Modal(document.getElementById('modalUser')).show(); }); })); el.querySelectorAll('.delete-user-btn').forEach(btn => btn.addEventListener('click', function () { const id = parseInt(this.dataset.userId, 10); msg.confirm('Delete this user?').then(confirmed => { if (!confirmed) return; api.users.delete(id).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalListUsers')).hide(); loadUsers(); }).catch(e => msg.error(e)); }); })); new bootstrap.Modal(document.getElementById('modalListUsers')).show(); }); });
 
 document.getElementById('menuProjectCreate')?.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('modalProjectId').value = ''; document.getElementById('modalProjectName').value = ''; document.getElementById('modalProjectDescription').value = ''; document.getElementById('modalProjectIconPath').value = ''; document.getElementById('modalProjectTitle').textContent = 'Create Project'; new bootstrap.Modal(document.getElementById('modalProject')).show(); });
   document.getElementById('menuProjectList')?.addEventListener('click', function (e) { e.preventDefault(); api.projects.list().then(projects => { const el = document.getElementById('listProjectsContent'); el.innerHTML = projects.map(p => `<div class="d-flex align-items-center gap-2 py-2 border-bottom"><img src="${escapeHtml(p.iconPath || '/favicon.ico')}" alt="" class="rounded flex-shrink-0" style="width:32px;height:32px;object-fit:cover;" onerror="this.src='/favicon.ico'" /><div class="flex-grow-1"><div class="fw-bold">${escapeHtml(p.name)}</div><div class="text-muted small">${escapeHtml(p.description || '')}</div><div class="small">${p.taskCount != null ? p.taskCount + ' tasks' : ''}</div></div><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary edit-project-btn" data-project-id="${p.projectId}">Edit</button><button class="btn btn-sm btn-outline-danger delete-project-list-btn" data-project-id="${p.projectId}" data-task-count="${p.taskCount || 0}" ${(p.taskCount || 0) > 0 ? 'disabled title="Remove tasks first"' : ''}>Delete</button></div></div>`).join('') || '<div class="text-muted small">No projects.</div>'; el.querySelectorAll('.edit-project-btn').forEach(btn => btn.addEventListener('click', function () { const id = parseInt(this.dataset.projectId, 10); api.projects.get(id).then(proj => { if (!proj) return; document.getElementById('modalProjectId').value = proj.projectId; document.getElementById('modalProjectName').value = proj.name; document.getElementById('modalProjectDescription').value = proj.description || ''; document.getElementById('modalProjectIconPath').value = proj.iconPath || ''; document.getElementById('modalProjectTitle').textContent = 'Edit Project'; bootstrap.Modal.getInstance(document.getElementById('modalListProjects')).hide(); new bootstrap.Modal(document.getElementById('modalProject')).show(); }); })); el.querySelectorAll('.delete-project-list-btn').forEach(btn => btn.addEventListener('click', function () { const id = parseInt(this.dataset.projectId, 10); const taskCount = parseInt(this.dataset.taskCount || '0', 10); if (taskCount > 0) { msg.warning('Cannot delete project that contains tasks. Move or delete the tasks first.'); return; } msg.confirm('Delete this project?').then(confirmed => { if (!confirmed) return; api.projects.delete(id).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalListProjects')).hide(); const fp = document.getElementById('filterProject'); if (fp && fp.value === String(id)) fp.value = ''; resetGroupAndLabelFilters(); setStoredFilter(getCurrentFilter()); loadProjects().then(() => { loadGroupsTree().then(() => { loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); }); loadLabels().then(() => loadTasks()); }); }).catch(e => msg.error(e)); }); })); new bootstrap.Modal(document.getElementById('modalListProjects')).show(); }); });
@@ -921,11 +1047,58 @@ document.getElementById('menuProjectCreate')?.addEventListener('click', function
 
   document.addEventListener('click', function () { document.getElementById('statusMenuContainer').style.display = 'none'; });
 
+  const activityLogsState = { page: 1, pageSize: 100, total: 0 };
+  function loadActivityLogsModal() {
+    const projectId = document.getElementById('activityLogFilterProject')?.value || '';
+    const userId = document.getElementById('activityLogFilterUser')?.value || '';
+    const taskNumber = document.getElementById('activityLogFilterTaskNumber')?.value || '';
+    api.activityLogs.list(projectId || null, userId || null, null, taskNumber || null, activityLogsState.page, activityLogsState.pageSize).then(r => {
+      const items = r.items || [];
+      activityLogsState.total = r.total || 0;
+      const content = document.getElementById('activityLogsContent');
+      if (content) {
+        content.innerHTML = items.length
+          ? items.map(l => `<div class="d-flex justify-content-between align-items-start small py-1 border-bottom"><div><span class="fw-semibold">#${l.taskNumber ?? '?'}</span> ${escapeHtml(l.taskTitle || '')} · ${escapeHtml(l.actionDetails || '')} ${l.userName ? 'by ' + escapeHtml(l.userName) : ''} · ${escapeHtml(l.projectName || '')}</div><span class="text-muted">${new Date(l.date).toLocaleString()}</span></div>`).join('')
+          : '<div class="text-muted small">No activity logs.</div>';
+      }
+      const totalPages = Math.ceil(activityLogsState.total / activityLogsState.pageSize) || 1;
+      const info = document.getElementById('activityLogsPaginationInfo');
+      if (info) info.textContent = `Page ${activityLogsState.page} of ${totalPages} (${activityLogsState.total} total)`;
+      document.getElementById('btnActivityLogsPrev').disabled = activityLogsState.page <= 1;
+      document.getElementById('btnActivityLogsNext').disabled = activityLogsState.page >= totalPages;
+    }).catch(() => {});
+  }
+  document.getElementById('btnActivityLogs')?.addEventListener('click', function () {
+    Promise.all([api.projects.list(), api.users.list()]).then(([projects, users]) => {
+      state.projects = projects;
+      state.users = users;
+      const projSel = document.getElementById('activityLogFilterProject');
+      const userSel = document.getElementById('activityLogFilterUser');
+      if (projSel) projSel.innerHTML = '<option value="">All Projects</option>' + (projects || []).map(p => `<option value="${p.projectId}">${escapeHtml(p.name || '')}</option>`).join('');
+      if (userSel) userSel.innerHTML = '<option value="">All Users</option>' + (users || []).map(u => `<option value="${u.userId}">${escapeHtml(u.name || '')}</option>`).join('');
+      activityLogsState.page = 1;
+      loadActivityLogsModal();
+      new bootstrap.Modal(document.getElementById('modalActivityLogs')).show();
+    });
+  });
+  document.getElementById('btnActivityLogsApply')?.addEventListener('click', function () { activityLogsState.page = 1; loadActivityLogsModal(); });
+  document.getElementById('btnActivityLogsPrev')?.addEventListener('click', function () { if (activityLogsState.page > 1) { activityLogsState.page--; loadActivityLogsModal(); } });
+  document.getElementById('btnActivityLogsNext')?.addEventListener('click', function () { const maxPage = Math.ceil(activityLogsState.total / activityLogsState.pageSize); if (activityLogsState.page < maxPage) { activityLogsState.page++; loadActivityLogsModal(); } });
+
   initTaskDescriptionEditor();
   loadProjects().then(() => {
     setFilterToInputs(state.filter);
     loadGroupsTree().then(() => { loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); });
-    loadUsers();
+    loadUsers().then(() => {
+      if (state.currentUserId && !state.users?.some(u => u.userId === state.currentUserId)) {
+        state.currentUserId = null;
+        localStorage.removeItem('smallTask_currentUserId');
+      }
+      updateUserLoginUI();
+      if (!state.currentUserId && state.users && state.users.length > 0) {
+        showUserSelectModal(false);
+      }
+    });
     loadLabels().then(() => loadTasks());
   });
 })();

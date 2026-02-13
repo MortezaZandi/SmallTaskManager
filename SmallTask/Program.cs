@@ -3,6 +3,7 @@ using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using SmallTask.Data;
+using SmallTask.Json;
 using SmallTask.Settings;
 using System.Text.Json.Serialization;
 
@@ -25,6 +26,7 @@ builder.Services.AddControllers().AddJsonOptions(o =>
 {
     o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    o.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
 });
 
 builder.Services.AddAntiforgery();

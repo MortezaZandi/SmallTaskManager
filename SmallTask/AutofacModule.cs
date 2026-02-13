@@ -16,6 +16,7 @@ public class AutofacModule : Module
         builder.RegisterType<LabelRepository>().As<ILabelRepository>().InstancePerLifetimeScope();
         builder.RegisterType<CommentRepository>().As<ICommentRepository>().InstancePerLifetimeScope();
         builder.RegisterType<AttachmentRepository>().As<IAttachmentRepository>().InstancePerLifetimeScope();
+        builder.RegisterType<ActivityLogRepository>().As<IActivityLogRepository>().InstancePerLifetimeScope();
 
         builder.RegisterType<ProjectService>().As<IProjectService>().InstancePerLifetimeScope();
         builder.RegisterType<UserService>().As<IUserService>().InstancePerLifetimeScope();
@@ -24,5 +25,6 @@ public class AutofacModule : Module
         builder.RegisterType<LabelService>().As<ILabelService>().InstancePerLifetimeScope();
         builder.RegisterType<CommentService>().As<ICommentService>().InstancePerLifetimeScope();
         builder.RegisterType<AttachmentService>().As<IAttachmentService>().InstancePerLifetimeScope();
+        builder.RegisterType<ActivityLogService>().As<IActivityLogService>().InstancePerLifetimeScope();
     }
 }

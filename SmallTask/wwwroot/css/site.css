@@ -98,7 +98,7 @@ body {
 .task-card-low {
     border-radius: 12px;
     border-right: 2px solid #C8C8C8;
-    background-color: #f9f9f9;
+    background-color: #ffffff;
     padding: 16px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
@@ -106,7 +106,7 @@ body {
 .task-card-medium {
     border-radius: 12px;
     border-right: 2px solid #F5C843;
-    background-color: #f9f9f9;
+    background-color: #ffffff;
     padding: 16px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
@@ -114,7 +114,7 @@ body {
 .task-card-high {
     border-radius: 12px;
     border-right: 2px solid #ff0000;
-    background-color: #f9f9f9;
+    background-color: #ffffff;
     padding: 16px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
@@ -130,6 +130,7 @@ body {
 .task-card-label { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; }
 .task-card-priority { font-size: 0.75rem; }
 .task-card-assigned { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.task-card-last-action { font-size: 0.7rem; line-height: 1.2; }
 
 /* Group tree */
 .group-tree-item {

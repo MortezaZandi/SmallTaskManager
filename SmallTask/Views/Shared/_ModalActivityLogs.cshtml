@@ -1,0 +1,26 @@
+<div class="modal fade" id="modalActivityLogs" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Activity Logs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <select class="form-select form-select-sm" id="activityLogFilterProject" style="max-width:160px"><option value="">All Projects</option></select>
+                    <select class="form-select form-select-sm" id="activityLogFilterUser" style="max-width:140px"><option value="">All Users</option></select>
+                    <input type="number" class="form-control form-control-sm" id="activityLogFilterTaskNumber" placeholder="Task #" style="max-width:100px" min="1" />
+                    <button type="button" class="btn btn-sm btn-primary" id="btnActivityLogsApply">Apply</button>
+                </div>
+                <div id="activityLogsContent" class="border rounded p-2" style="max-height:400px;overflow-y:auto;"></div>
+                <div class="d-flex align-items-center justify-content-between mt-2">
+                    <span id="activityLogsPaginationInfo" class="text-muted small"></span>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnActivityLogsPrev">Previous</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnActivityLogsNext">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

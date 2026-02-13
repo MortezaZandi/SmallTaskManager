@@ -7,15 +7,20 @@ namespace SmallTask.Services;
 public class TaskService : ITaskService
 {
     private readonly ITaskRepository _taskRepo;
+    private readonly IActivityLogService _activityLog;
 
-    public TaskService(ITaskRepository taskRepo) => _taskRepo = taskRepo;
+    public TaskService(ITaskRepository taskRepo, IActivityLogService activityLog)
+    {
+        _taskRepo = taskRepo;
+        _activityLog = activityLog;
+    }
 
     public async Task<TaskItem?> GetByIdAsync(int taskId) => await _taskRepo.GetByIdAsync(taskId);
 
     public async Task<IReadOnlyList<TaskItem>> GetFilteredAsync(TaskFilter filter) =>
         await _taskRepo.GetFilteredAsync(filter);
 
-    public async Task<TaskItem> CreateAsync(int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null)
+    public async Task<TaskItem> CreateAsync(int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null, int? activityUserId = null)
     {
         var taskNumber = await _taskRepo.GetNextTaskNumberAsync();
         var now = DateTime.UtcNow;
@@ -36,13 +41,15 @@ public class TaskService : ITaskService
         task = await _taskRepo.AddAsync(task);
         if (labelIds != null && labelIds.Count > 0)
             await _taskRepo.SetTaskLabelsAsync(task.TaskId, labelIds);
+        await _activityLog.LogAsync(projectId, task.TaskId, activityUserId, "Created");
         return (await _taskRepo.GetByIdAsync(task.TaskId))!;
     }
 
-    public async Task UpdateAsync(int taskId, int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null)
+    public async Task UpdateAsync(int taskId, int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null, int? activityUserId = null)
     {
         var task = await _taskRepo.GetByIdAsync(taskId, includeDeleted: true);
         if (task == null) throw new InvalidOperationException("Task not found.");
+        var statusChanged = task.Status != status;
         var t = new TaskItem
         {
             TaskId = task.TaskId,
@@ -61,9 +68,11 @@ public class TaskService : ITaskService
         await _taskRepo.UpdateAsync(t);
         if (labelIds != null)
             await _taskRepo.SetTaskLabelsAsync(taskId, labelIds);
+        var details = statusChanged ? $"Status changed to {status}" : "Edited";
+        await _activityLog.LogAsync(projectId, taskId, activityUserId, details);
     }
 
-    public async Task DeleteAsync(int taskId)
+    public async Task DeleteAsync(int taskId, int? activityUserId = null)
     {
         var task = await _taskRepo.GetByIdAsync(taskId, includeDeleted: true);
         if (task == null) throw new InvalidOperationException("Task not found.");
@@ -83,5 +92,6 @@ public class TaskService : ITaskService
             UpdatedAt = DateTime.UtcNow
         };
         await _taskRepo.UpdateAsync(t);
+        await _activityLog.LogAsync(task.ProjectId, taskId, activityUserId, "Deleted");
     }
 }

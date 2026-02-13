@@ -15,6 +15,7 @@ namespace SmallTask.Data
         public DbSet<TaskLabel> TaskLabels => Set<TaskLabel>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<Attachment> Attachments => Set<Attachment>();
+        public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -114,6 +115,24 @@ namespace SmallTask.Data
                 e.Property(x => x.FilePath).HasMaxLength(1000);
                 e.HasOne(x => x.Task)
                     .WithMany(x => x.Attachments)
+                    .HasForeignKey(x => x.TaskId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ActivityLog>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.ActionDetails).HasMaxLength(500);
+                e.HasOne(x => x.Project)
+                    .WithMany()
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(x => x.Task)
+                    .WithMany()
                     .HasForeignKey(x => x.TaskId)
                     .OnDelete(DeleteBehavior.Cascade);
             });

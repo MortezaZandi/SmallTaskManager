@@ -15,16 +15,28 @@
                 <div id="headerProjectBrand" class="d-flex align-items-center" style="min-width:32px;min-height:32px;"><span class="fw-bold">SmallTask</span></div>
                 <div class="d-flex align-items-center gap-2 flex" id="filterArea">
                     <select class="form-select form-select-sm" id="filterProject" style="max-width:160px"><option value="">All Projects</option></select>
-                    <input type="text" class="form-control form-control-sm" id="filterText" placeholder="Text" style="max-width:140px" />
                     <select class="form-select form-select-sm" id="filterGroup" style="max-width:140px"><option value="">All Groups</option></select>
                     <select class="form-select form-select-sm" id="filterLabel" style="max-width:140px"><option value="">All Labels</option></select>
                     <select class="form-select form-select-sm" id="filterPriority" style="max-width:100px"><option value="">Priority</option><option value="0">Low</option><option value="1">Medium</option><option value="2">High</option></select>
                     <select class="form-select form-select-sm" id="filterStatus" style="max-width:110px"><option value="">Status</option><option value="0">Todo</option><option value="1">In Progress</option><option value="2">Done</option></select>
                     <select class="form-select form-select-sm" id="filterUser" style="max-width:120px"><option value="">Assigned</option></select>
                     <input type="number" class="form-control form-control-sm" id="filterTaskNumber" placeholder="#" style="max-width:70px" min="1" />
+                    <input type="text" class="form-control form-control-sm" id="filterText" placeholder="Text" style="min-width:220px;max-width:280px" />
                     <button type="button" class="btn btn-sm btn-primary" id="btnApplyFilter">Apply</button>
                 </div>
-                <div class="dropdown ms-auto">
+                <div class="d-flex align-items-center gap-2 ms-auto" id="userLoggedInArea" style="display:none;">
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" id="btnUserLoggedIn">
+                            <span id="userLoggedInName">—</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" id="btnUserChange">Change user</a></li>
+                            <li><a class="dropdown-item" href="#" id="btnUserLogout">Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnActivityLogs">Activity Logs</button>
+                <div class="dropdown">
                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Filter</button>
                     <ul class="dropdown-menu" id="filterMenu">
                         <li><a class="dropdown-item" href="#" data-filter="default">Default (no filter)</a></li>
@@ -59,6 +71,8 @@
     <partial name="_ModalComment" />
     <partial name="_ModalListUsers" />
     <partial name="_ModalListLabels" />
+    <partial name="_ModalActivityLogs" />
+    <partial name="_ModalLogin" />
     <partial name="_ModalMessage" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

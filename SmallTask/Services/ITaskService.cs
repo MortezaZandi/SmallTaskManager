@@ -8,7 +8,7 @@ public interface ITaskService
 {
     Task<TaskItem?> GetByIdAsync(int taskId);
     Task<IReadOnlyList<TaskItem>> GetFilteredAsync(TaskFilter filter);
-    Task<TaskItem> CreateAsync(int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null);
-    Task UpdateAsync(int taskId, int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null);
-    Task DeleteAsync(int taskId);
+    Task<TaskItem> CreateAsync(int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null, int? activityUserId = null);
+    Task UpdateAsync(int taskId, int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null, int? activityUserId = null);
+    Task DeleteAsync(int taskId, int? activityUserId = null);
 }

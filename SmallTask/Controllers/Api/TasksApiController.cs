@@ -39,6 +39,9 @@ public class TasksApiController : ControllerBase
         return Ok(list);
     }
 
+    private int? GetActivityUserId() =>
+        Request.Headers.TryGetValue("X-Activity-User-Id", out var v) && int.TryParse(v, out var id) ? id : null;
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateTaskRequest req)
     {
@@ -52,7 +55,8 @@ public class TasksApiController : ControllerBase
                 req.Priority,
                 req.AssignedUserId,
                 req.GroupId,
-                req.LabelIds);
+                req.LabelIds,
+                GetActivityUserId());
             return CreatedAtAction(nameof(Get), new { id = t.TaskId }, t);
         }
         catch (Exception ex)
@@ -75,7 +79,8 @@ public class TasksApiController : ControllerBase
                 req.Priority,
                 req.AssignedUserId,
                 req.GroupId,
-                req.LabelIds);
+                req.LabelIds,
+                GetActivityUserId());
             return Ok();
         }
         catch (InvalidOperationException)
@@ -93,7 +98,7 @@ public class TasksApiController : ControllerBase
     {
         try
         {
-            await _service.DeleteAsync(id);
+            await _service.DeleteAsync(id, GetActivityUserId());
             return NoContent();
         }
         catch (InvalidOperationException)
