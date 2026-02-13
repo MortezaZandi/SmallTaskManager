@@ -24,12 +24,14 @@ public class TaskItem
     public string? Description { get; set; }
     public TaskStatus Status { get; set; }
     public TaskPriority Priority { get; set; }
+    public int ProjectId { get; set; }
     public int? AssignedUserId { get; set; }
     public int? GroupId { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    public Project? Project { get; set; }
     public User? AssignedUser { get; set; }
     public Group? Group { get; set; }
     public ICollection<TaskLabel> TaskLabels { get; set; } = new List<TaskLabel>();

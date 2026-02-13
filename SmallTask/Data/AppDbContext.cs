@@ -7,6 +7,7 @@ namespace SmallTask.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+        public DbSet<Project> Projects => Set<Project>();
         public DbSet<User> Users => Set<User>();
         public DbSet<TaskItem> Tasks => Set<TaskItem>();
         public DbSet<Group> Groups => Set<Group>();
@@ -17,6 +18,13 @@ namespace SmallTask.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Project>(e =>
+            {
+                e.HasKey(x => x.ProjectId);
+                e.Property(x => x.Name).HasMaxLength(200);
+                e.Property(x => x.Description).HasMaxLength(2000);
+            });
+
             modelBuilder.Entity<User>(e =>
             {
                 e.HasKey(x => x.UserId);
@@ -48,6 +56,10 @@ namespace SmallTask.Data
                 e.Property(x => x.Title).HasMaxLength(500);
                 e.Property(x => x.Description).HasMaxLength(4000);
                 e.HasIndex(x => x.TaskNumber).IsUnique();
+                e.HasOne(x => x.Project)
+                    .WithMany(x => x.Tasks)
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(x => x.AssignedUser)
                     .WithMany()
                     .HasForeignKey(x => x.AssignedUserId)

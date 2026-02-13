@@ -14,6 +14,7 @@ public class TaskRepository : ITaskRepository
     public async Task<TaskItem?> GetByIdAsync(int taskId, bool includeDeleted = false)
     {
         var q = _db.Tasks.AsNoTracking()
+            .Include(x => x.Project)
             .Include(x => x.AssignedUser)
             .Include(x => x.Group)
             .Include(x => x.TaskLabels).ThenInclude(x => x.Label)
@@ -31,11 +32,14 @@ public class TaskRepository : ITaskRepository
     public async Task<IReadOnlyList<TaskItem>> GetFilteredAsync(TaskFilter filter)
     {
         var q = _db.Tasks.AsNoTracking()
+            .Include(x => x.Project)
             .Include(x => x.AssignedUser)
             .Include(x => x.Group)
             .Include(x => x.TaskLabels).ThenInclude(x => x.Label)
             .Where(x => !x.IsDeleted && x.Status != TaskStatus.Deleted);
 
+        if (filter.ProjectId.HasValue)
+            q = q.Where(x => x.ProjectId == filter.ProjectId.Value);
         if (!string.IsNullOrWhiteSpace(filter.Text))
         {
             var t = filter.Text.Trim().ToLower();

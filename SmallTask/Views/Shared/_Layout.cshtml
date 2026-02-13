@@ -14,6 +14,7 @@
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <span class="fw-bold">SmallTask</span>
                 <div class="d-flex align-items-center gap-2 flex" id="filterArea">
+                    <select class="form-select form-select-sm" id="filterProject" style="max-width:160px"><option value="">All Projects</option></select>
                     <input type="text" class="form-control form-control-sm" id="filterText" placeholder="Text" style="max-width:140px" />
                     <select class="form-select form-select-sm" id="filterGroup" style="max-width:140px"><option value="">All Groups</option></select>
                     <select class="form-select form-select-sm" id="filterLabel" style="max-width:140px"><option value="">All Labels</option></select>
@@ -46,6 +47,9 @@
     </div>
 
     @* Modals *@
+    <partial name="_ModalProject" />
+    <partial name="_ModalListProjects" />
+    <partial name="_ModalDeleteProject" />
     <partial name="_ModalGroup" />
     <partial name="_ModalUser" />
     <partial name="_ModalTaskDetails" />

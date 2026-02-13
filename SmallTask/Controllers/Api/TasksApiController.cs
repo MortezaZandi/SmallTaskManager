@@ -26,6 +26,7 @@ public class TasksApiController : ControllerBase
     {
         var filter = new TaskFilter
         {
+            ProjectId = q.ProjectId,
             Text = q.Text,
             GroupId = q.GroupId,
             LabelId = q.LabelId,
@@ -44,6 +45,7 @@ public class TasksApiController : ControllerBase
         try
         {
             var t = await _service.CreateAsync(
+                req.ProjectId,
                 req.Title,
                 req.Description,
                 req.Status,
@@ -66,6 +68,7 @@ public class TasksApiController : ControllerBase
         {
             await _service.UpdateAsync(
                 id,
+                req.ProjectId,
                 req.Title,
                 req.Description,
                 req.Status,
@@ -102,6 +105,7 @@ public class TasksApiController : ControllerBase
 
 public class TaskFilterQuery
 {
+    public int? ProjectId { get; set; }
     public string? Text { get; set; }
     public int? GroupId { get; set; }
     public int? LabelId { get; set; }
@@ -113,6 +117,7 @@ public class TaskFilterQuery
 
 public class CreateTaskRequest
 {
+    public int ProjectId { get; set; }
     public string Title { get; set; } = "";
     public string? Description { get; set; }
     public TaskStatus Status { get; set; }
@@ -124,6 +129,7 @@ public class CreateTaskRequest
 
 public class UpdateTaskRequest
 {
+    public int ProjectId { get; set; }
     public string Title { get; set; } = "";
     public string? Description { get; set; }
     public TaskStatus Status { get; set; }

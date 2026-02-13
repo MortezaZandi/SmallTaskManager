@@ -9,6 +9,7 @@ public class AutofacModule : Module
     protected override void Load(ContainerBuilder builder)
     {
 
+        builder.RegisterType<ProjectRepository>().As<IProjectRepository>().InstancePerLifetimeScope();
         builder.RegisterType<UserRepository>().As<IUserRepository>().InstancePerLifetimeScope();
         builder.RegisterType<GroupRepository>().As<IGroupRepository>().InstancePerLifetimeScope();
         builder.RegisterType<TaskRepository>().As<ITaskRepository>().InstancePerLifetimeScope();
@@ -16,6 +17,7 @@ public class AutofacModule : Module
         builder.RegisterType<CommentRepository>().As<ICommentRepository>().InstancePerLifetimeScope();
         builder.RegisterType<AttachmentRepository>().As<IAttachmentRepository>().InstancePerLifetimeScope();
 
+        builder.RegisterType<ProjectService>().As<IProjectService>().InstancePerLifetimeScope();
         builder.RegisterType<UserService>().As<IUserService>().InstancePerLifetimeScope();
         builder.RegisterType<GroupService>().As<IGroupService>().InstancePerLifetimeScope();
         builder.RegisterType<TaskService>().As<ITaskService>().InstancePerLifetimeScope();

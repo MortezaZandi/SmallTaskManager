@@ -15,12 +15,13 @@ public class TaskService : ITaskService
     public async Task<IReadOnlyList<TaskItem>> GetFilteredAsync(TaskFilter filter) =>
         await _taskRepo.GetFilteredAsync(filter);
 
-    public async Task<TaskItem> CreateAsync(string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null)
+    public async Task<TaskItem> CreateAsync(int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null)
     {
         var taskNumber = await _taskRepo.GetNextTaskNumberAsync();
         var now = DateTime.UtcNow;
         var task = new TaskItem
         {
+            ProjectId = projectId,
             TaskNumber = taskNumber,
             Title = title,
             Description = description,
@@ -38,13 +39,14 @@ public class TaskService : ITaskService
         return (await _taskRepo.GetByIdAsync(task.TaskId))!;
     }
 
-    public async Task UpdateAsync(int taskId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null)
+    public async Task UpdateAsync(int taskId, int projectId, string title, string? description, TaskStatus status, TaskPriority priority, int? assignedUserId, int? groupId, IReadOnlyList<int>? labelIds = null)
     {
         var task = await _taskRepo.GetByIdAsync(taskId, includeDeleted: true);
         if (task == null) throw new InvalidOperationException("Task not found.");
         var t = new TaskItem
         {
             TaskId = task.TaskId,
+            ProjectId = projectId,
             TaskNumber = task.TaskNumber,
             Title = title,
             Description = description,
@@ -68,6 +70,7 @@ public class TaskService : ITaskService
         var t = new TaskItem
         {
             TaskId = task.TaskId,
+            ProjectId = task.ProjectId,
             TaskNumber = task.TaskNumber,
             Title = task.Title,
             Description = task.Description,

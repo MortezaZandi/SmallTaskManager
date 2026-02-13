@@ -2,6 +2,12 @@
   'use strict';
 
   const api = {
+    projects: {
+      list: () => fetch('/api/projects').then(r => r.json()),
+      get: id => fetch(`/api/projects/${id}`).then(r => r.ok ? r.json() : null),
+      create: (name, description) => fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description: description || null }) }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.message || e))),
+      delete: id => fetch(`/api/projects/${id}`, { method: 'DELETE' }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e.message || e)); })
+    },
     groups: {
       roots: () => fetch('/api/groups/roots').then(r => r.json()),
       get: id => fetch(`/api/groups/${id}`).then(r => r.ok ? r.json() : null),
@@ -29,6 +35,7 @@
       get: id => fetch(`/api/tasks/${id}`).then(r => r.ok ? r.json() : null),
       filtered: (q) => {
         const params = new URLSearchParams();
+        if (q.projectId) params.set('projectId', q.projectId);
         if (q.text) params.set('text', q.text);
         if (q.groupId) params.set('groupId', q.groupId);
         if (q.labelId) params.set('labelId', q.labelId);
@@ -62,6 +69,7 @@
   };
 
   let state = {
+    projects: [],
     groups: [],
     users: [],
     labels: [],
@@ -130,14 +138,19 @@
   function getStoredFilter() {
     try {
       const s = localStorage.getItem('smallTask_filter');
-      return s ? JSON.parse(s) : {};
+      const f = s ? JSON.parse(s) : {};
+      const lastProject = parseInt(localStorage.getItem('smallTask_lastProjectId') || '0', 10);
+      if (!f.projectId && lastProject) f.projectId = lastProject;
+      return f;
     } catch (_) { return {}; }
   }
   function setStoredFilter(f) {
     localStorage.setItem('smallTask_filter', JSON.stringify(f));
+    if (f.projectId) localStorage.setItem('smallTask_lastProjectId', f.projectId);
   }
 
   function getCurrentFilter() {
+    const projectId = document.getElementById('filterProject')?.value;
     const text = document.getElementById('filterText')?.value?.trim() || '';
     const groupId = document.getElementById('filterGroup')?.value;
     const labelId = document.getElementById('filterLabel')?.value;
@@ -146,6 +159,7 @@
     const assignedUserId = document.getElementById('filterUser')?.value;
     const taskNumber = document.getElementById('filterTaskNumber')?.value;
     return {
+      projectId: projectId ? parseInt(projectId, 10) : undefined,
       text: text || undefined,
       groupId: groupId ? parseInt(groupId, 10) : undefined,
       labelId: labelId ? parseInt(labelId, 10) : undefined,
@@ -157,6 +171,7 @@
   }
   function setFilterToInputs(f) {
     const el = (id, val) => { const e = document.getElementById(id); if (e) e.value = val != null ? val : ''; };
+    el('filterProject', f.projectId);
     el('filterText', f.text);
     el('filterGroup', f.groupId);
     el('filterLabel', f.labelId);
@@ -292,6 +307,27 @@
     });
   }
 
+  function loadProjects() {
+    return api.projects.list().then(list => {
+      state.projects = list;
+      const filterProject = document.getElementById('filterProject');
+      if (filterProject) {
+        const cur = filterProject.value;
+        filterProject.innerHTML = '<option value="">All Projects</option>';
+        list.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.projectId;
+          opt.textContent = p.name + (p.taskCount != null ? ' (' + p.taskCount + ')' : '');
+          filterProject.appendChild(opt);
+        });
+        if (cur) filterProject.value = cur;
+        else if (list.length && state.filter.projectId) filterProject.value = state.filter.projectId;
+        else if (list.length && parseInt(localStorage.getItem('smallTask_lastProjectId') || '0', 10)) filterProject.value = localStorage.getItem('smallTask_lastProjectId');
+      }
+      return list;
+    });
+  }
+
   function loadLabels() {
     return api.labels.list().then(list => {
       state.labels = list;
@@ -401,6 +437,7 @@
       document.getElementById('modalTaskDetailsAssignedUser').innerHTML = task.assignedUser
         ? `<img src="${escapeHtml(task.assignedUser.iconPath || '/favicon.ico')}" alt="" class="me-1" style="width:20px;height:20px;border-radius:50%;" onerror="this.src='/favicon.ico'" /> ${escapeHtml(task.assignedUser.name)}`
         : '—';
+      document.getElementById('modalTaskDetailsProject').textContent = (task.project && task.project.name) ? task.project.name : '—';
       document.getElementById('modalTaskDetailsGroup').textContent = (task.group && task.group.name) ? task.group.name : '—';
       const labelsHtml = (task.taskLabels || []).filter(tl => tl.label).map(tl =>
         `<span class="task-card-label me-1" style="background:${tl.label.color}20;color:${tl.label.color}">${escapeHtml(tl.label.name)}</span>`
@@ -426,6 +463,7 @@
     if (!taskId) {
       document.getElementById('modalTaskHeader').textContent = 'Create Task';
       document.getElementById('modalTaskId').value = '';
+      document.getElementById('modalTaskProjectId').value = document.getElementById('filterProject')?.value || (state.projects[0]?.projectId || '');
       document.getElementById('modalTaskTitle').value = '';
       setTaskDescriptionHtml('');
       document.getElementById('modalTaskPriority').value = '1';
@@ -443,6 +481,7 @@
       if (!task) return;
       document.getElementById('modalTaskHeader').textContent = 'Edit Task';
       document.getElementById('modalTaskId').value = task.taskId;
+      document.getElementById('modalTaskProjectId').value = task.projectId != null ? String(task.projectId) : '';
       document.getElementById('modalTaskTitle').value = task.title;
       setTaskDescriptionHtml(task.description || '');
       document.getElementById('modalTaskPriority').value = String(task.priority);
@@ -493,7 +532,9 @@
     const assignedUserId = document.getElementById('modalTaskAssignedUser').value ? parseInt(document.getElementById('modalTaskAssignedUser').value, 10) : null;
     const groupId = document.getElementById('modalTaskGroup').value ? parseInt(document.getElementById('modalTaskGroup').value, 10) : null;
     const labelIds = Array.from(document.querySelectorAll('#modalTaskLabelsList input[type="checkbox"]:checked')).map(cb => parseInt(cb.value, 10));
-    const data = { title, description, status, priority, assignedUserId, groupId, labelIds };
+    const projectId = parseInt(document.getElementById('modalTaskProjectId')?.value || document.getElementById('filterProject')?.value || '0', 10) || (state.projects[0] && state.projects[0].projectId);
+    if (!projectId) { alert('Select a project first.'); return; }
+    const data = { projectId, title, description, status, priority, assignedUserId, groupId, labelIds };
     if (!id) {
       api.tasks.create(data).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalTask')).hide(); loadTasks(); }).catch(e => alert(e));
     } else {
@@ -544,6 +585,14 @@
       this.value = '';
       openTaskModal(parseInt(taskId, 10));
     }).catch(e => alert(e));
+  });
+
+  document.getElementById('modalProjectSave')?.addEventListener('click', function () {
+    const id = document.getElementById('modalProjectId').value;
+    const name = document.getElementById('modalProjectName').value.trim();
+    if (!name) { alert('Name is required.'); return; }
+    const description = document.getElementById('modalProjectDescription').value.trim() || null;
+    api.projects.create(name, description).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalProject')).hide(); loadProjects(); loadTasks(); }).catch(e => alert(e));
   });
 
   document.getElementById('modalGroupSave')?.addEventListener('click', function () {
@@ -614,12 +663,16 @@
     document.getElementById('menuUserEdit')?.addEventListener('click', function (e) { e.preventDefault(); const id = state.currentUserId || (state.users[0] && state.users[0].userId); if (!id) { alert('Select or create a user first.'); return; } api.users.get(id).then(u => { if (!u) return; document.getElementById('modalUserId').value = u.userId; document.getElementById('modalUserName').value = u.name; document.getElementById('modalUserIconPath').value = u.iconPath || ''; document.getElementById('modalUserTitle').textContent = 'Edit User'; new bootstrap.Modal(document.getElementById('modalUser')).show(); }); });
     document.getElementById('menuUserList')?.addEventListener('click', function (e) { e.preventDefault(); api.users.list().then(users => { const el = document.getElementById('listUsersContent'); el.innerHTML = Array.from(users).map(u => `<div class="d-flex align-items-center gap-2 py-2 border-bottom"><span>${escapeHtml(u.name)}</span><button class="btn btn-sm btn-outline-primary ms-auto" data-user-id="${u.userId}">Use as comment author</button></div>`).join(''); el.querySelectorAll('[data-user-id]').forEach(btn => btn.addEventListener('click', function () { state.currentUserId = parseInt(this.dataset.userId, 10); localStorage.setItem('smallTask_currentUserId', state.currentUserId); bootstrap.Modal.getInstance(document.getElementById('modalListUsers')).hide(); })); new bootstrap.Modal(document.getElementById('modalListUsers')).show(); }); });
 
+  document.getElementById('menuProjectCreate')?.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('modalProjectId').value = ''; document.getElementById('modalProjectName').value = ''; document.getElementById('modalProjectDescription').value = ''; document.getElementById('modalProjectTitle').textContent = 'Create Project'; new bootstrap.Modal(document.getElementById('modalProject')).show(); });
+  document.getElementById('menuProjectList')?.addEventListener('click', function (e) { e.preventDefault(); api.projects.list().then(projects => { const el = document.getElementById('listProjectsContent'); el.innerHTML = projects.map(p => `<div class="d-flex flex-column py-2 border-bottom"><div class="fw-bold">${escapeHtml(p.name)}</div><div class="text-muted small">${escapeHtml(p.description || '')}</div><div class="small">${p.taskCount != null ? p.taskCount + ' tasks' : ''}</div></div>`).join('') || '<div class="text-muted small">No projects.</div>'; new bootstrap.Modal(document.getElementById('modalListProjects')).show(); }); });
+  document.getElementById('menuProjectDelete')?.addEventListener('click', function (e) { e.preventDefault(); api.projects.list().then(projects => { const el = document.getElementById('deleteProjectList'); el.innerHTML = projects.map(p => `<div class="d-flex align-items-center justify-content-between py-2 border-bottom"><span>${escapeHtml(p.name)} (${p.taskCount != null ? p.taskCount : 0} tasks)</span><button class="btn btn-sm btn-outline-danger delete-project-btn" data-id="${p.projectId}" ${(p.taskCount || 0) > 0 ? 'disabled title="Remove tasks first"' : ''}>Delete</button></div>`).join('') || '<div class="text-muted small">No projects.</div>'; el.querySelectorAll('.delete-project-btn').forEach(btn => { if (!btn.disabled) btn.addEventListener('click', function () { if (!confirm('Delete this project?')) return; api.projects.delete(parseInt(this.dataset.id, 10)).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalDeleteProject')).hide(); loadProjects(); loadTasks(); }).catch(err => alert(err)); }); }); new bootstrap.Modal(document.getElementById('modalDeleteProject')).show(); }); });
+
   document.getElementById('menuLabelCreate')?.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('modalLabelId').value = ''; document.getElementById('modalLabelName').value = ''; document.getElementById('modalLabelDescription').value = ''; document.getElementById('modalLabelColor').value = '#000000'; document.getElementById('modalLabelTitle').textContent = 'Create Label'; new bootstrap.Modal(document.getElementById('modalLabel')).show(); });
   document.getElementById('menuLabelEdit')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.labels.length) { alert('Create a label first.'); return; } const l = state.labels[0]; document.getElementById('modalLabelId').value = l.labelId; document.getElementById('modalLabelName').value = l.name; document.getElementById('modalLabelDescription').value = l.description || ''; document.getElementById('modalLabelColor').value = l.color || '#000000'; document.getElementById('modalLabelTitle').textContent = 'Edit Label'; new bootstrap.Modal(document.getElementById('modalLabel')).show(); });
   document.getElementById('menuLabelList')?.addEventListener('click', function (e) { e.preventDefault(); api.labels.list().then(labels => { const el = document.getElementById('listLabelsContent'); el.innerHTML = labels.map(l => `<div class="d-flex align-items-center gap-2 py-2 border-bottom"><span class="task-card-label" style="background:${l.color}20;color:${l.color}">${escapeHtml(l.name)}</span><span class="text-muted small">${escapeHtml(l.description || '')}</span></div>`).join(''); new bootstrap.Modal(document.getElementById('modalListLabels')).show(); }); });
 
   document.getElementById('btnApplyFilter')?.addEventListener('click', function () { setStoredFilter(getCurrentFilter()); loadTasks(); });
-  document.querySelectorAll('#filterArea input, #filterArea select').forEach(el => el.addEventListener('change', function () { loadTasks(); }));
+  document.querySelectorAll('#filterArea input, #filterArea select').forEach(el => el.addEventListener('change', function () { setStoredFilter(getCurrentFilter()); loadTasks(); }));
   document.querySelectorAll('#filterMenu [data-filter="default"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setFilterToInputs({}); setStoredFilter({}); loadTasks(); }));
   document.querySelectorAll('#filterMenu [data-filter="save"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setStoredFilter(getCurrentFilter()); alert('Filter saved.'); }));
   document.querySelectorAll('#filterMenu [data-filter="delete"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setStoredFilter({}); setFilterToInputs({}); loadTasks(); }));
@@ -629,8 +682,10 @@
   document.addEventListener('click', function () { document.getElementById('statusMenuContainer').style.display = 'none'; });
 
   initTaskDescriptionEditor();
-  setFilterToInputs(state.filter);
-  loadGroupsTree().then(() => { loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); });
-  loadUsers();
-  loadLabels().then(() => loadTasks());
+  loadProjects().then(() => {
+    setFilterToInputs(state.filter);
+    loadGroupsTree().then(() => { loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); });
+    loadUsers();
+    loadLabels().then(() => loadTasks());
+  });
 })();
