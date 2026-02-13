@@ -64,13 +64,10 @@
     </div>
 </div>
 
-<div class="dropdown position-fixed bottom-0 end-0 m-3" id="statusMenuContainer" style="display:none;">
-    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Status</button>
-    <ul class="dropdown-menu">
-        <li><a class="dropdown-item" href="#" data-status="0">Todo</a></li>
-        <li><a class="dropdown-item" href="#" data-status="1">In Progress</a></li>
-        <li><a class="dropdown-item" href="#" data-status="2">Done</a></li>
-        <li><hr class="dropdown-divider" /></li>
-        <li><a class="dropdown-item text-danger" href="#" data-status="delete">Delete task</a></li>
-    </ul>
+<div class="dropdown-menu shadow" id="statusMenuContainer" style="display:none; position:fixed; min-width:160px; z-index:2050;">
+    <a class="dropdown-item" href="#" data-status="0">Todo</a>
+    <a class="dropdown-item" href="#" data-status="1">In Progress</a>
+    <a class="dropdown-item" href="#" data-status="2">Done</a>
+    <hr class="dropdown-divider" />
+    <a class="dropdown-item text-danger" href="#" data-status="delete">Delete task</a>
 </div>

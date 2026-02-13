@@ -91,6 +91,10 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
+.task-card-dragging {
+  opacity: 0.5;
+}
+
 .task-card-low {
     border-radius: 12px;
     border-right: 2px solid #C8C8C8;

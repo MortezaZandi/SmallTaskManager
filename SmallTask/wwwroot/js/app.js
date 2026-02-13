@@ -459,6 +459,9 @@
              const card = document.createElement('div');
              card.className = 'task-card ' + priorityStyle(task.priority);
           card.dataset.taskId = task.taskId;
+          card.draggable = true;
+          card.addEventListener('dragstart', function (e) { e.dataTransfer.setData('text/plain', task.taskId); e.dataTransfer.effectAllowed = 'move'; this.classList.add('task-card-dragging'); });
+          card.addEventListener('dragend', function () { this.classList.remove('task-card-dragging'); });
           card.innerHTML = `
             <div class="task-card-title" style="text-align:right">${escapeHtml(task.title)}</div>
             <div class="task-card-meta">
@@ -485,6 +488,34 @@
           col.appendChild(card);
          });
           document.getElementById('taskCount' + status).innerHTML = Array.from(list).filter(t => t.status === status).length;
+      });
+      initColumnDropTargets();
+    });
+  }
+
+  function initColumnDropTargets() {
+    const colIds = ['columnTodo', 'columnInProgress', 'columnDone'];
+    const statusByCol = { columnTodo: 0, columnInProgress: 1, columnDone: 2 };
+    colIds.forEach(id => {
+      const col = document.getElementById(id);
+      if (!col || col._dropInitialized) return;
+      col._dropInitialized = true;
+      col.addEventListener('dragover', function (e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+      col.addEventListener('drop', function (e) {
+        e.preventDefault();
+        const taskId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        const newStatus = statusByCol[id];
+        const task = state.tasks?.find(t => t.taskId === taskId);
+        if (!task || task.status === newStatus) return;
+        const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+        if (card) col.appendChild(card);
+        api.tasks.get(taskId).then(t => {
+          if (!t) return;
+          api.tasks.update(taskId, { projectId: t.projectId, title: t.title, description: t.description, status: newStatus, priority: t.priority, assignedUserId: t.assignedUserId, groupId: t.groupId, labelIds: (t.taskLabels || []).map(tl => tl.labelId) }).then(() => {
+            if (state.tasks) { const idx = state.tasks.findIndex(x => x.taskId === taskId); if (idx >= 0) state.tasks[idx].status = newStatus; }
+            ['columnTodo', 'columnInProgress', 'columnDone'].forEach((cid, s) => { const el = document.getElementById('taskCount' + s); if (el) el.textContent = state.tasks.filter(x => x.status === s).length; });
+          }).catch(() => loadTasks());
+        });
       });
     });
   }
@@ -886,7 +917,7 @@ document.getElementById('menuProjectCreate')?.addEventListener('click', function
   document.querySelectorAll('#filterMenu [data-filter="save"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setStoredFilter(getCurrentFilter()); msg.info('Filter saved.'); }));
   document.querySelectorAll('#filterMenu [data-filter="delete"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setStoredFilter({}); setFilterToInputs({}); loadTasks(); }));
 
-  document.querySelectorAll('#statusMenuContainer [data-status]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); const status = this.dataset.status; const taskId = state.selectedTaskId; document.getElementById('statusMenuContainer').style.display = 'none'; if (!taskId) return; if (status === 'delete') { msg.confirm('Delete this task?').then(confirmed => { if (!confirmed) return; api.tasks.delete(taskId).then(() => loadTasks()).catch(e => msg.error(e)); }); return; } api.tasks.get(taskId).then(t => { if (!t) return; api.tasks.update(taskId, { title: t.title, description: t.description, status: parseInt(status, 10), priority: t.priority, assignedUserId: t.assignedUserId, groupId: t.groupId, labelIds: (t.taskLabels || []).map(tl => tl.labelId) }).then(() => loadTasks()).catch(e => msg.error(e)); }); }));
+  document.querySelectorAll('#statusMenuContainer [data-status]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); const status = this.dataset.status; const taskId = state.selectedTaskId; document.getElementById('statusMenuContainer').style.display = 'none'; if (!taskId) return; if (status === 'delete') { msg.confirm('Delete this task?').then(confirmed => { if (!confirmed) return; api.tasks.delete(taskId).then(() => loadTasks()).catch(e => msg.error(e)); }); return; } api.tasks.get(taskId).then(t => { if (!t) return; api.tasks.update(taskId, { projectId: t.projectId, title: t.title, description: t.description, status: parseInt(status, 10), priority: t.priority, assignedUserId: t.assignedUserId, groupId: t.groupId, labelIds: (t.taskLabels || []).map(tl => tl.labelId) }).then(() => loadTasks()).catch(e => msg.error(e)); }); }));
 
   document.addEventListener('click', function () { document.getElementById('statusMenuContainer').style.display = 'none'; });
 
