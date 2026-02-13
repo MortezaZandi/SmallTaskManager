@@ -41,7 +41,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Only redirect to HTTPS when the host is configured with HTTPS URLs (avoids redirect loop when hosted with only HTTP, e.g. from SmallTaskList.App).
+var urls = app.Configuration["urls"] ?? builder.Configuration["urls"] ?? "";
+if (urls.IndexOf("https", StringComparison.OrdinalIgnoreCase) >= 0)
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 
 app.UseRouting();
