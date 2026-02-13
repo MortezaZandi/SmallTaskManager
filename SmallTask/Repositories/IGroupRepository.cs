@@ -8,7 +8,7 @@ public interface IGroupRepository
     Task<IReadOnlyList<Group>> GetRootGroupsAsync(bool includeDeleted = false);
     Task<IReadOnlyList<Group>> GetChildrenAsync(int parentGroupId, bool includeDeleted = false);
     Task<IReadOnlyList<Group>> GetAllFlatAsync(bool includeDeleted = false);
-    Task<int> GetTaskCountAsync(int groupId, bool includeDeletedTasks = false);
+    Task<int> GetTaskCountAsync(int groupId, int? projectId = null, bool includeDeletedTasks = false);
     Task<Group> AddAsync(Group group);
     Task UpdateAsync(Group group);
 }

@@ -166,3 +166,6 @@ body {
 .task-detail-description .ql-align-center { text-align: center; }
 .task-detail-description .ql-align-right { text-align: right; }
 .task-detail-description .ql-align-justify { text-align: justify; }
+
+/* Message modal must appear above other modals (task, project, etc.) */
+#modalMessage.modal { z-index: 2060 !important; }

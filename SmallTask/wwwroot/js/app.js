@@ -13,6 +13,7 @@
       get: id => fetch(`/api/groups/${id}`).then(r => r.ok ? r.json() : null),
       children: id => fetch(`/api/groups/${id}/children`).then(r => r.json()),
       flat: () => fetch('/api/groups/flat').then(r => r.json()),
+      withTaskCount: projectId => fetch('/api/groups/with-task-count' + (projectId ? '?projectId=' + projectId : '')).then(r => r.json()),
       create: (name, parentId) => fetch('/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, parentGroupId: parentId || null }) }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.message || e))),
       rename: (id, name) => fetch(`/api/groups/${id}/rename`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e.message || e)); }),
       move: (id, newParentId) => fetch(`/api/groups/${id}/move`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newParentGroupId: newParentId }) }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e.message || e)); }),
@@ -65,6 +66,50 @@
       },
       delete: id => fetch(`/api/attachments/${id}`, { method: 'DELETE' }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e)); }),
       downloadUrl: id => `/api/attachments/${id}/download`
+    }
+  };
+
+  const msg = {
+    _modal: null,
+    _resolve: null,
+    _init() {
+      if (this._modal) return;
+      const el = document.getElementById('modalMessage');
+      if (!el) return;
+      this._modal = new bootstrap.Modal(el, { backdrop: 'static' });
+      document.getElementById('modalMessageBtnOk')?.addEventListener('click', () => { this._modal.hide(); if (this._resolve) this._resolve(false); });
+      document.getElementById('modalMessageBtnCancel')?.addEventListener('click', () => { this._modal.hide(); if (this._resolve) this._resolve(false); });
+      document.getElementById('modalMessageBtnYes')?.addEventListener('click', () => { this._modal.hide(); if (this._resolve) this._resolve(true); });
+      el.addEventListener('hidden.bs.modal', () => { if (this._resolve) this._resolve(false); this._resolve = null; });
+    },
+    _show(type, title, text, isQuestion) {
+      this._init();
+      const header = document.getElementById('modalMessageHeader');
+      const titleEl = document.getElementById('modalMessageTitle');
+      const iconEl = document.getElementById('modalMessageIcon');
+      const textEl = document.getElementById('modalMessageText');
+      const okBtn = document.getElementById('modalMessageBtnOk');
+      const cancelBtn = document.getElementById('modalMessageBtnCancel');
+      const yesBtn = document.getElementById('modalMessageBtnYes');
+      header.className = 'modal-header';
+      if (type === 'info') { header.classList.add('bg-info', 'bg-opacity-10'); iconEl.className = 'flex-shrink-0 fs-2 text-info'; iconEl.textContent = 'ℹ'; }
+      else if (type === 'warning') { header.classList.add('bg-warning', 'bg-opacity-10'); iconEl.className = 'flex-shrink-0 fs-2 text-warning'; iconEl.textContent = '⚠'; }
+      else if (type === 'error') { header.classList.add('bg-danger', 'bg-opacity-10'); iconEl.className = 'flex-shrink-0 fs-2 text-danger'; iconEl.textContent = '✕'; }
+      else { header.classList.add('bg-primary', 'bg-opacity-10'); iconEl.className = 'flex-shrink-0 fs-2 text-primary'; iconEl.textContent = '?'; }
+      titleEl.textContent = title;
+      textEl.textContent = text;
+      okBtn.style.display = isQuestion ? 'none' : 'inline-block';
+      cancelBtn.style.display = isQuestion ? 'inline-block' : 'none';
+      yesBtn.style.display = isQuestion ? 'inline-block' : 'none';
+      this._modal.show();
+    },
+    info(text, title = 'Information') { this._show('info', title, text, false); },
+    warning(text, title = 'Warning') { this._show('warning', title, text, false); },
+    error(text, title = 'Error') { const t = typeof text === 'object' && text?.message ? text.message : String(text || 'An error occurred'); this._show('error', title, t, false); },
+    confirm(text, title = 'Confirm') {
+      this._init();
+      this._show('question', title || 'Confirm', text, true);
+      return new Promise(resolve => { this._resolve = resolve; });
     }
   };
 
@@ -252,7 +297,7 @@
         div.classList.remove('bg-primary', 'bg-opacity-25');
         const srcId = parseInt(e.dataTransfer.getData('text/plain'), 10);
         if (srcId === g.groupId) return;
-        api.groups.move(srcId, g.groupId).then(() => loadGroupsTree()).catch(err => alert(err));
+        api.groups.move(srcId, g.groupId).then(() => loadGroupsTree()).catch(err => msg.error(err));
       });
           div.addEventListener('click', function () {
               state.selectedGroupId = g.groupId;
@@ -490,7 +535,7 @@
       document.getElementById('modalTaskGroup').value = task.groupId != null ? String(task.groupId) : '';
       const selectedLabelIds = (task.taskLabels || []).map(tl => tl.labelId);
       renderTaskLabelCheckboxes(selectedLabelIds);
-      loadGroupOptions('modalTaskGroup', task.groupId);
+      loadGroupOptions('modalTaskGroup');
       api.comments.byTask(taskId).then(comments => {
         const list = document.getElementById('modalTaskCommentsList');
         list.innerHTML = '';
@@ -512,8 +557,7 @@
         });
         list.querySelectorAll('.delete-attachment').forEach(btn => {
           btn.addEventListener('click', function () {
-            if (!confirm('Delete this attachment?')) return;
-            api.attachments.delete(parseInt(this.dataset.id, 10)).then(() => openTaskModal(taskId));
+            msg.confirm('Delete this attachment?').then(confirmed => { if (!confirmed) return; api.attachments.delete(parseInt(this.dataset.id, 10)).then(() => openTaskModal(taskId)).catch(e => msg.error(e)); });
           });
         });
       });
@@ -525,7 +569,7 @@
     const id = document.getElementById('modalTaskId').value;
     const titleEl = document.getElementById('modalTaskTitle');
     const title = titleEl ? titleEl.value.trim() : '';
-    if (!title) { alert('Title is required.'); return; }
+    if (!title) { msg.warning('Title is required.'); return; }
     const description = getTaskDescriptionHtml();
     const priority = parseInt(document.getElementById('modalTaskPriority').value, 10);
     const status = parseInt(document.getElementById('modalTaskStatus').value, 10);
@@ -533,19 +577,19 @@
     const groupId = document.getElementById('modalTaskGroup').value ? parseInt(document.getElementById('modalTaskGroup').value, 10) : null;
     const labelIds = Array.from(document.querySelectorAll('#modalTaskLabelsList input[type="checkbox"]:checked')).map(cb => parseInt(cb.value, 10));
     const projectId = parseInt(document.getElementById('modalTaskProjectId')?.value || document.getElementById('filterProject')?.value || '0', 10) || (state.projects[0] && state.projects[0].projectId);
-    if (!projectId) { alert('Select a project first.'); return; }
+    if (!projectId) { msg.warning('Select a project first.'); return; }
     const data = { projectId, title, description, status, priority, assignedUserId, groupId, labelIds };
     if (!id) {
-      api.tasks.create(data).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalTask')).hide(); loadTasks(); }).catch(e => alert(e));
+      api.tasks.create(data).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalTask')).hide(); loadTasks(); }).catch(e => msg.error(e));
     } else {
-      api.tasks.update(parseInt(id, 10), data).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalTask')).hide(); loadTasks(); }).catch(e => alert(e));
+      api.tasks.update(parseInt(id, 10), data).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalTask')).hide(); loadTasks(); }).catch(e => msg.error(e));
     }
   }
 
   document.getElementById('modalTaskAddComment')?.addEventListener('click', function () {
     const taskId = document.getElementById('modalTaskId').value;
-    if (!taskId) { alert('Save the task first before adding comments.'); return; }
-    if (!state.currentUserId) { alert('Select a user (or create one) to post comments.'); return; }
+    if (!taskId) { msg.warning('Save the task first before adding comments.'); return; }
+    if (!state.currentUserId) { msg.warning('Select a user (or create one) to post comments.'); return; }
     document.getElementById('modalCommentId').value = '';
     document.getElementById('modalCommentTaskId').value = taskId;
     document.getElementById('modalCommentText').value = '';
@@ -557,24 +601,24 @@
     const id = document.getElementById('modalCommentId').value;
     const taskId = parseInt(document.getElementById('modalCommentTaskId').value, 10);
     const text = document.getElementById('modalCommentText').value.trim();
-    if (!text) { alert('Text is required.'); return; }
+    if (!text) { msg.warning('Text is required.'); return; }
     if (id) {
       api.comments.update(parseInt(id, 10), text).then(() => {
         bootstrap.Modal.getInstance(document.getElementById('modalComment')).hide();
         openTaskModal(taskId);
-      }).catch(e => alert(e));
+      }).catch(e => msg.error(e));
     } else {
-      if (!state.currentUserId) { alert('Select a user to post comments.'); return; }
+      if (!state.currentUserId) { msg.warning('Select a user to post comments.'); return; }
       api.comments.create(taskId, state.currentUserId, text).then(() => {
         bootstrap.Modal.getInstance(document.getElementById('modalComment')).hide();
         openTaskModal(taskId);
-      }).catch(e => alert(e));
+      }).catch(e => msg.error(e));
     }
   });
 
   document.getElementById('modalTaskUploadAttachment')?.addEventListener('click', function () {
     const taskId = document.getElementById('modalTaskId').value;
-    if (!taskId) { alert('Save the task first.'); return; }
+    if (!taskId) { msg.warning('Save the task first.'); return; }
     document.getElementById('modalTaskFileInput').click();
   });
   document.getElementById('modalTaskFileInput')?.addEventListener('change', function () {
@@ -584,38 +628,38 @@
     api.attachments.upload(parseInt(taskId, 10), file).then(() => {
       this.value = '';
       openTaskModal(parseInt(taskId, 10));
-    }).catch(e => alert(e));
+    }).catch(e => msg.error(e));
   });
 
   document.getElementById('modalProjectSave')?.addEventListener('click', function () {
     const id = document.getElementById('modalProjectId').value;
     const name = document.getElementById('modalProjectName').value.trim();
-    if (!name) { alert('Name is required.'); return; }
+    if (!name) { msg.warning('Name is required.'); return; }
     const description = document.getElementById('modalProjectDescription').value.trim() || null;
-    api.projects.create(name, description).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalProject')).hide(); loadProjects(); loadTasks(); }).catch(e => alert(e));
+    api.projects.create(name, description).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalProject')).hide(); loadProjects(); loadTasks(); }).catch(e => msg.error(e));
   });
 
   document.getElementById('modalGroupSave')?.addEventListener('click', function () {
     const id = document.getElementById('modalGroupId').value;
     const name = document.getElementById('modalGroupName').value.trim();
-    if (!name) { alert('Name is required.'); return; }
+    if (!name) { msg.warning('Name is required.'); return; }
     const parentId = document.getElementById('modalGroupParent').value ? parseInt(document.getElementById('modalGroupParent').value, 10) : null;
     if (!id) {
-      api.groups.create(name, parentId).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalGroup')).hide(); loadGroupsTree(); loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); }).catch(e => alert(e));
+      api.groups.create(name, parentId).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalGroup')).hide(); loadGroupsTree(); loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); }).catch(e => msg.error(e));
     } else {
-      api.groups.rename(parseInt(id, 10), name).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalGroup')).hide(); loadGroupsTree(); loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); }).catch(e => alert(e));
+      api.groups.rename(parseInt(id, 10), name).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalGroup')).hide(); loadGroupsTree(); loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); }).catch(e => msg.error(e));
     }
   });
 
   document.getElementById('modalUserSave')?.addEventListener('click', function () {
     const id = document.getElementById('modalUserId').value;
     const name = document.getElementById('modalUserName').value.trim();
-    if (!name) { alert('Name is required.'); return; }
+    if (!name) { msg.warning('Name is required.'); return; }
     const iconPath = document.getElementById('modalUserIconPath').value.trim() || null;
     if (!id) {
-      api.users.create(name, iconPath).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide(); loadUsers(); }).catch(e => alert(e));
+      api.users.create(name, iconPath).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide(); loadUsers(); }).catch(e => msg.error(e));
     } else {
-      api.users.update(parseInt(id, 10), name, iconPath).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide(); loadUsers(); }).catch(e => alert(e));
+      api.users.update(parseInt(id, 10), name, iconPath).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide(); loadUsers(); }).catch(e => msg.error(e));
     }
   });
 
@@ -630,54 +674,53 @@
   document.getElementById('modalTaskDetailsDelete')?.addEventListener('click', function () {
     const taskId = document.getElementById('modalTaskDetailsId').value;
     if (!taskId) return;
-    if (!confirm('Delete this task?')) return;
-    api.tasks.delete(parseInt(taskId, 10)).then(() => {
+    msg.confirm('Delete this task?').then(confirmed => { if (!confirmed) return; api.tasks.delete(parseInt(taskId, 10)).then(() => {
       bootstrap.Modal.getInstance(document.getElementById('modalTaskDetails')).hide();
       state.selectedTaskId = null;
       loadTasks();
-    }).catch(e => alert(e));
+    }).catch(e => msg.error(e)); });
   });
 
   document.getElementById('modalLabelSave')?.addEventListener('click', function () {
     const id = document.getElementById('modalLabelId').value;
     const name = document.getElementById('modalLabelName').value.trim();
-    if (!name) { alert('Name is required.'); return; }
+    if (!name) { msg.warning('Name is required.'); return; }
     const description = document.getElementById('modalLabelDescription').value.trim() || null;
     const color = document.getElementById('modalLabelColor').value || '#000000';
     if (!id) {
-      api.labels.create(name, description, color).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalLabel')).hide(); loadLabels(); }).catch(e => alert(e));
+      api.labels.create(name, description, color).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalLabel')).hide(); loadLabels(); }).catch(e => msg.error(e));
     } else {
-      api.labels.update(parseInt(id, 10), name, description, color).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalLabel')).hide(); loadLabels(); }).catch(e => alert(e));
+      api.labels.update(parseInt(id, 10), name, description, color).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalLabel')).hide(); loadLabels(); }).catch(e => msg.error(e));
     }
   });
 
   document.getElementById('menuGroupCreate')?.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('modalGroupTitle').textContent = 'Create Group'; document.getElementById('modalGroupId').value = ''; document.getElementById('modalGroupName').value = ''; document.getElementById('modalGroupParentWrap').style.display = 'block'; loadGroupOptions('modalGroupParent'); new bootstrap.Modal(document.getElementById('modalGroup')).show(); });
-  document.getElementById('menuGroupRename')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.selectedGroupId) { alert('Select a group first.'); return; } document.getElementById('modalGroupTitle').textContent = 'Rename Group'; api.groups.get(state.selectedGroupId).then(g => { if (!g) return; document.getElementById('modalGroupId').value = g.groupId; document.getElementById('modalGroupName').value = g.name; document.getElementById('modalGroupParentWrap').style.display = 'none'; new bootstrap.Modal(document.getElementById('modalGroup')).show(); }); });
-  document.getElementById('menuGroupDelete')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.selectedGroupId) { alert('Select a group first.'); return; } if (!confirm('Delete this group?')) return; api.groups.delete(state.selectedGroupId).then(() => { state.selectedGroupId = null; loadGroupsTree(); loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); loadTasks(); }).catch(e => alert(e)); });
+  document.getElementById('menuGroupRename')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.selectedGroupId) { msg.warning('Select a group first.'); return; } document.getElementById('modalGroupTitle').textContent = 'Rename Group'; api.groups.get(state.selectedGroupId).then(g => { if (!g) return; document.getElementById('modalGroupId').value = g.groupId; document.getElementById('modalGroupName').value = g.name; document.getElementById('modalGroupParentWrap').style.display = 'none'; new bootstrap.Modal(document.getElementById('modalGroup')).show(); }); });
+  document.getElementById('menuGroupList')?.addEventListener('click', function (e) { e.preventDefault(); const projectId = document.getElementById('filterProject')?.value ? parseInt(document.getElementById('filterProject').value, 10) : null; api.groups.withTaskCount(projectId).then(groups => { const el = document.getElementById('listGroupsContent'); el.innerHTML = groups.map(g => `<div class="d-flex align-items-center justify-content-between py-2 border-bottom"><span>${escapeHtml(g.name)} (${g.taskCount != null ? g.taskCount : 0} tasks)</span><button class="btn btn-sm btn-outline-danger delete-group-btn" data-id="${g.groupId}" ${(g.taskCountTotal || 0) > 0 ? 'disabled title="Remove tasks first"' : ''}>Delete</button></div>`).join('') || '<div class="text-muted small">No groups.</div>'; el.querySelectorAll('.delete-group-btn').forEach(btn => { if (!btn.disabled) btn.addEventListener('click', function () { msg.confirm('Delete this group?').then(confirmed => { if (!confirmed) return; api.groups.delete(parseInt(this.dataset.id, 10)).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalListGroups')).hide(); loadGroupsTree(); loadGroupOptions('filterGroup'); loadGroupOptions('modalTaskGroup'); loadTasks(); }).catch(err => msg.error(err)); }); }); }); new bootstrap.Modal(document.getElementById('modalListGroups')).show(); }); });
 
   document.getElementById('menuTaskCreate')?.addEventListener('click', function (e) { e.preventDefault(); openTaskModal(null); });
-  document.getElementById('menuTaskEdit')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.selectedTaskId) { alert('Select a task first (click on a card).'); return; } openTaskModal(state.selectedTaskId); });
-  document.getElementById('menuTaskDelete')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.selectedTaskId) { alert('Select a task first.'); return; } if (!confirm('Delete this task?')) return; api.tasks.delete(state.selectedTaskId).then(() => { state.selectedTaskId = null; loadTasks(); }).catch(e => alert(e)); });
+  document.getElementById('menuTaskEdit')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.selectedTaskId) { msg.warning('Select a task first (click on a card).'); return; } openTaskModal(state.selectedTaskId); });
+  document.getElementById('menuTaskDelete')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.selectedTaskId) { msg.warning('Select a task first.'); return; } msg.confirm('Delete this task?').then(confirmed => { if (!confirmed) return; api.tasks.delete(state.selectedTaskId).then(() => { state.selectedTaskId = null; loadTasks(); }).catch(e => msg.error(e)); }); });
 
   document.getElementById('menuUserCreate')?.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('modalUserId').value = ''; document.getElementById('modalUserName').value = ''; document.getElementById('modalUserIconPath').value = ''; document.getElementById('modalUserTitle').textContent = 'Create User'; new bootstrap.Modal(document.getElementById('modalUser')).show(); });
-    document.getElementById('menuUserEdit')?.addEventListener('click', function (e) { e.preventDefault(); const id = state.currentUserId || (state.users[0] && state.users[0].userId); if (!id) { alert('Select or create a user first.'); return; } api.users.get(id).then(u => { if (!u) return; document.getElementById('modalUserId').value = u.userId; document.getElementById('modalUserName').value = u.name; document.getElementById('modalUserIconPath').value = u.iconPath || ''; document.getElementById('modalUserTitle').textContent = 'Edit User'; new bootstrap.Modal(document.getElementById('modalUser')).show(); }); });
+    document.getElementById('menuUserEdit')?.addEventListener('click', function (e) { e.preventDefault(); const id = state.currentUserId || (state.users[0] && state.users[0].userId); if (!id) { msg.warning('Select or create a user first.'); return; } api.users.get(id).then(u => { if (!u) return; document.getElementById('modalUserId').value = u.userId; document.getElementById('modalUserName').value = u.name; document.getElementById('modalUserIconPath').value = u.iconPath || ''; document.getElementById('modalUserTitle').textContent = 'Edit User'; new bootstrap.Modal(document.getElementById('modalUser')).show(); }); });
     document.getElementById('menuUserList')?.addEventListener('click', function (e) { e.preventDefault(); api.users.list().then(users => { const el = document.getElementById('listUsersContent'); el.innerHTML = Array.from(users).map(u => `<div class="d-flex align-items-center gap-2 py-2 border-bottom"><span>${escapeHtml(u.name)}</span><button class="btn btn-sm btn-outline-primary ms-auto" data-user-id="${u.userId}">Use as comment author</button></div>`).join(''); el.querySelectorAll('[data-user-id]').forEach(btn => btn.addEventListener('click', function () { state.currentUserId = parseInt(this.dataset.userId, 10); localStorage.setItem('smallTask_currentUserId', state.currentUserId); bootstrap.Modal.getInstance(document.getElementById('modalListUsers')).hide(); })); new bootstrap.Modal(document.getElementById('modalListUsers')).show(); }); });
 
   document.getElementById('menuProjectCreate')?.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('modalProjectId').value = ''; document.getElementById('modalProjectName').value = ''; document.getElementById('modalProjectDescription').value = ''; document.getElementById('modalProjectTitle').textContent = 'Create Project'; new bootstrap.Modal(document.getElementById('modalProject')).show(); });
   document.getElementById('menuProjectList')?.addEventListener('click', function (e) { e.preventDefault(); api.projects.list().then(projects => { const el = document.getElementById('listProjectsContent'); el.innerHTML = projects.map(p => `<div class="d-flex flex-column py-2 border-bottom"><div class="fw-bold">${escapeHtml(p.name)}</div><div class="text-muted small">${escapeHtml(p.description || '')}</div><div class="small">${p.taskCount != null ? p.taskCount + ' tasks' : ''}</div></div>`).join('') || '<div class="text-muted small">No projects.</div>'; new bootstrap.Modal(document.getElementById('modalListProjects')).show(); }); });
-  document.getElementById('menuProjectDelete')?.addEventListener('click', function (e) { e.preventDefault(); api.projects.list().then(projects => { const el = document.getElementById('deleteProjectList'); el.innerHTML = projects.map(p => `<div class="d-flex align-items-center justify-content-between py-2 border-bottom"><span>${escapeHtml(p.name)} (${p.taskCount != null ? p.taskCount : 0} tasks)</span><button class="btn btn-sm btn-outline-danger delete-project-btn" data-id="${p.projectId}" ${(p.taskCount || 0) > 0 ? 'disabled title="Remove tasks first"' : ''}>Delete</button></div>`).join('') || '<div class="text-muted small">No projects.</div>'; el.querySelectorAll('.delete-project-btn').forEach(btn => { if (!btn.disabled) btn.addEventListener('click', function () { if (!confirm('Delete this project?')) return; api.projects.delete(parseInt(this.dataset.id, 10)).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalDeleteProject')).hide(); loadProjects(); loadTasks(); }).catch(err => alert(err)); }); }); new bootstrap.Modal(document.getElementById('modalDeleteProject')).show(); }); });
+  document.getElementById('menuProjectDelete')?.addEventListener('click', function (e) { e.preventDefault(); api.projects.list().then(projects => { const el = document.getElementById('deleteProjectList'); el.innerHTML = projects.map(p => `<div class="d-flex align-items-center justify-content-between py-2 border-bottom"><span>${escapeHtml(p.name)} (${p.taskCount != null ? p.taskCount : 0} tasks)</span><button class="btn btn-sm btn-outline-danger delete-project-btn" data-id="${p.projectId}" ${(p.taskCount || 0) > 0 ? 'disabled title="Remove tasks first"' : ''}>Delete</button></div>`).join('') || '<div class="text-muted small">No projects.</div>'; el.querySelectorAll('.delete-project-btn').forEach(btn => { if (!btn.disabled) btn.addEventListener('click', function () { msg.confirm('Delete this project?').then(confirmed => { if (!confirmed) return; api.projects.delete(parseInt(this.dataset.id, 10)).then(() => { bootstrap.Modal.getInstance(document.getElementById('modalDeleteProject')).hide(); loadProjects(); loadTasks(); }).catch(err => msg.error(err)); }); }); }); new bootstrap.Modal(document.getElementById('modalDeleteProject')).show(); }); });
 
   document.getElementById('menuLabelCreate')?.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('modalLabelId').value = ''; document.getElementById('modalLabelName').value = ''; document.getElementById('modalLabelDescription').value = ''; document.getElementById('modalLabelColor').value = '#000000'; document.getElementById('modalLabelTitle').textContent = 'Create Label'; new bootstrap.Modal(document.getElementById('modalLabel')).show(); });
-  document.getElementById('menuLabelEdit')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.labels.length) { alert('Create a label first.'); return; } const l = state.labels[0]; document.getElementById('modalLabelId').value = l.labelId; document.getElementById('modalLabelName').value = l.name; document.getElementById('modalLabelDescription').value = l.description || ''; document.getElementById('modalLabelColor').value = l.color || '#000000'; document.getElementById('modalLabelTitle').textContent = 'Edit Label'; new bootstrap.Modal(document.getElementById('modalLabel')).show(); });
+  document.getElementById('menuLabelEdit')?.addEventListener('click', function (e) { e.preventDefault(); if (!state.labels.length) { msg.warning('Create a label first.'); return; } const l = state.labels[0]; document.getElementById('modalLabelId').value = l.labelId; document.getElementById('modalLabelName').value = l.name; document.getElementById('modalLabelDescription').value = l.description || ''; document.getElementById('modalLabelColor').value = l.color || '#000000'; document.getElementById('modalLabelTitle').textContent = 'Edit Label'; new bootstrap.Modal(document.getElementById('modalLabel')).show(); });
   document.getElementById('menuLabelList')?.addEventListener('click', function (e) { e.preventDefault(); api.labels.list().then(labels => { const el = document.getElementById('listLabelsContent'); el.innerHTML = labels.map(l => `<div class="d-flex align-items-center gap-2 py-2 border-bottom"><span class="task-card-label" style="background:${l.color}20;color:${l.color}">${escapeHtml(l.name)}</span><span class="text-muted small">${escapeHtml(l.description || '')}</span></div>`).join(''); new bootstrap.Modal(document.getElementById('modalListLabels')).show(); }); });
 
   document.getElementById('btnApplyFilter')?.addEventListener('click', function () { setStoredFilter(getCurrentFilter()); loadTasks(); });
   document.querySelectorAll('#filterArea input, #filterArea select').forEach(el => el.addEventListener('change', function () { setStoredFilter(getCurrentFilter()); loadTasks(); }));
   document.querySelectorAll('#filterMenu [data-filter="default"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setFilterToInputs({}); setStoredFilter({}); loadTasks(); }));
-  document.querySelectorAll('#filterMenu [data-filter="save"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setStoredFilter(getCurrentFilter()); alert('Filter saved.'); }));
+  document.querySelectorAll('#filterMenu [data-filter="save"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setStoredFilter(getCurrentFilter()); msg.info('Filter saved.'); }));
   document.querySelectorAll('#filterMenu [data-filter="delete"]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); setStoredFilter({}); setFilterToInputs({}); loadTasks(); }));
 
-  document.querySelectorAll('#statusMenuContainer [data-status]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); const status = this.dataset.status; const taskId = state.selectedTaskId; document.getElementById('statusMenuContainer').style.display = 'none'; if (!taskId) return; if (status === 'delete') { if (!confirm('Delete this task?')) return; api.tasks.delete(taskId).then(() => loadTasks()); return; } api.tasks.get(taskId).then(t => { if (!t) return; api.tasks.update(taskId, { title: t.title, description: t.description, status: parseInt(status, 10), priority: t.priority, assignedUserId: t.assignedUserId, groupId: t.groupId, labelIds: (t.taskLabels || []).map(tl => tl.labelId) }).then(() => loadTasks()); }); }));
+  document.querySelectorAll('#statusMenuContainer [data-status]').forEach(el => el.addEventListener('click', function (e) { e.preventDefault(); const status = this.dataset.status; const taskId = state.selectedTaskId; document.getElementById('statusMenuContainer').style.display = 'none'; if (!taskId) return; if (status === 'delete') { msg.confirm('Delete this task?').then(confirmed => { if (!confirmed) return; api.tasks.delete(taskId).then(() => loadTasks()).catch(e => msg.error(e)); }); return; } api.tasks.get(taskId).then(t => { if (!t) return; api.tasks.update(taskId, { title: t.title, description: t.description, status: parseInt(status, 10), priority: t.priority, assignedUserId: t.assignedUserId, groupId: t.groupId, labelIds: (t.taskLabels || []).map(tl => tl.labelId) }).then(() => loadTasks()).catch(e => msg.error(e)); }); }));
 
   document.addEventListener('click', function () { document.getElementById('statusMenuContainer').style.display = 'none'; });
 

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmallTask.Data;
 using SmallTask.Models;
+using TaskStatus = SmallTask.Models.TaskStatus;
 
 namespace SmallTask.Repositories;
 
@@ -44,10 +45,11 @@ public class GroupRepository : IGroupRepository
         return await q.ToListAsync();
     }
 
-    public async Task<int> GetTaskCountAsync(int groupId, bool includeDeletedTasks = false)
+    public async Task<int> GetTaskCountAsync(int groupId, int? projectId = null, bool includeDeletedTasks = false)
     {
         var q = _db.Tasks.Where(x => x.GroupId == groupId);
-        if (!includeDeletedTasks) q = q.Where(x => !x.IsDeleted);
+        if (projectId.HasValue) q = q.Where(x => x.ProjectId == projectId.Value);
+        if (!includeDeletedTasks) q = q.Where(x => !x.IsDeleted && x.Status != TaskStatus.Deleted);
         return await q.CountAsync();
     }
 

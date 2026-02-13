@@ -31,6 +31,10 @@ public class GroupsApiController : ControllerBase
     public async Task<IActionResult> GetAllFlat() =>
         Ok(await _service.GetAllFlatAsync());
 
+    [HttpGet("with-task-count")]
+    public async Task<IActionResult> GetWithTaskCount([FromQuery] int? projectId) =>
+        Ok(await _service.GetAllWithTaskCountAsync(projectId));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateGroupRequest req)
     {

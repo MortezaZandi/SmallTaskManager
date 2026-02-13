@@ -23,6 +23,26 @@ public class GroupService : IGroupService
 
     public async Task<IReadOnlyList<Group>> GetAllFlatAsync() => await _groupRepo.GetAllFlatAsync();
 
+    public async Task<IReadOnlyList<GroupWithTaskCount>> GetAllWithTaskCountAsync(int? projectId = null)
+    {
+        var groups = await _groupRepo.GetAllFlatAsync();
+        var result = new List<GroupWithTaskCount>();
+        foreach (var g in groups)
+        {
+            var countInProject = await _groupRepo.GetTaskCountAsync(g.GroupId, projectId);
+            var countTotal = await _groupRepo.GetTaskCountAsync(g.GroupId, null);
+            result.Add(new GroupWithTaskCount
+            {
+                GroupId = g.GroupId,
+                Name = g.Name,
+                ParentGroupId = g.ParentGroupId,
+                TaskCount = countInProject,
+                TaskCountTotal = countTotal
+            });
+        }
+        return result;
+    }
+
     public async Task<Group> CreateAsync(string name, int? parentGroupId = null)
     {
         var group = new Group
