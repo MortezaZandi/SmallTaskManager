@@ -20,29 +20,27 @@ public class GroupRepository : IGroupRepository
         return await q.FirstOrDefaultAsync();
     }
 
-    public async Task<IReadOnlyList<Group>> GetRootGroupsAsync(bool includeDeleted = false)
+    public async Task<IReadOnlyList<Group>> GetRootGroupsAsync(int projectId, bool includeDeleted = false)
     {
         var q = _db.Groups.AsNoTracking()
-            .Where(x => x.ParentGroupId == null)
-            .OrderBy(x => x.Name);
-        if (!includeDeleted) q = (IOrderedQueryable<Group>)q.Where(x => !x.IsDeleted);
-        return await q.ToListAsync();
+            .Where(x => x.ProjectId == projectId && x.ParentGroupId == null);
+        if (!includeDeleted) q = q.Where(x => !x.IsDeleted);
+        return await q.OrderBy(x => x.Name).ToListAsync();
     }
 
-    public async Task<IReadOnlyList<Group>> GetChildrenAsync(int parentGroupId, bool includeDeleted = false)
+    public async Task<IReadOnlyList<Group>> GetChildrenAsync(int projectId, int parentGroupId, bool includeDeleted = false)
     {
         var q = _db.Groups.AsNoTracking()
-            .Where(x => x.ParentGroupId == parentGroupId)
-            .OrderBy(x => x.Name);
-        if (!includeDeleted) q = (IOrderedQueryable<Group>)q.Where(x => !x.IsDeleted);
-        return await q.ToListAsync();
+            .Where(x => x.ProjectId == projectId && x.ParentGroupId == parentGroupId);
+        if (!includeDeleted) q = q.Where(x => !x.IsDeleted);
+        return await q.OrderBy(x => x.Name).ToListAsync();
     }
 
-    public async Task<IReadOnlyList<Group>> GetAllFlatAsync(bool includeDeleted = false)
+    public async Task<IReadOnlyList<Group>> GetAllFlatAsync(int projectId, bool includeDeleted = false)
     {
-        var q = _db.Groups.AsNoTracking().OrderBy(x => x.Name);
-        if (!includeDeleted) q = (IOrderedQueryable<Group>)q.Where(x => !x.IsDeleted);
-        return await q.ToListAsync();
+        var q = _db.Groups.AsNoTracking().Where(x => x.ProjectId == projectId);
+        if (!includeDeleted) q = q.Where(x => !x.IsDeleted);
+        return await q.OrderBy(x => x.Name).ToListAsync();
     }
 
     public async Task<int> GetTaskCountAsync(int groupId, int? projectId = null, bool includeDeletedTasks = false)

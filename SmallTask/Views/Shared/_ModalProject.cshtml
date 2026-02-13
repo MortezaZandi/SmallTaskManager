@@ -7,6 +7,7 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="modalProjectId" />
+                <input type="hidden" id="modalProjectIconPath" />
                 <div class="mb-2">
                     <label class="form-label">Name</label>
                     <input type="text" class="form-control" id="modalProjectName" />
@@ -14,6 +15,24 @@
                 <div class="mb-2">
                     <label class="form-label">Description</label>
                     <textarea class="form-control" id="modalProjectDescription" rows="3"></textarea>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Icon</label>
+                    <div class="d-flex flex-wrap gap-2 align-items-start">
+                        <div class="flex-shrink-0">
+                            <img id="modalProjectIconPreview" src="/favicon.ico" alt="" class="rounded border" style="width:48px;height:48px;object-fit:cover;" onerror="this.src='/favicon.ico'" />
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex gap-1 mb-1">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="modalProjectIconClear">None</button>
+                                <label class="btn btn-sm btn-outline-primary mb-0">
+                                    Upload new
+                                    <input type="file" id="modalProjectIconUpload" accept="image/png,image/jpeg,image/gif,image/webp" class="d-none" />
+                                </label>
+                            </div>
+                            <div id="modalProjectIconGrid" class="d-flex flex-wrap gap-1" style="max-height:120px;overflow-y:auto"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

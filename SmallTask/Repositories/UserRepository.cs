@@ -24,6 +24,38 @@ public class UserRepository : IUserRepository
         return await q.ToListAsync();
     }
 
+    public async Task<IReadOnlyList<UserWithTaskCounts>> GetUsersWithTaskCountsAsync()
+    {
+        var users = await _db.Users.AsNoTracking()
+            .Where(u => !u.IsDeleted)
+            .OrderBy(u => u.Name)
+            .Select(u => new { u.UserId, u.Name, u.IconPath })
+            .ToListAsync();
+
+        var counts = await _db.Tasks.AsNoTracking()
+            .Where(t => t.AssignedUserId != null && !t.IsDeleted && (int)t.Status <= 2)
+            .GroupBy(t => new { t.AssignedUserId, t.Status })
+            .Select(g => new { g.Key.AssignedUserId, g.Key.Status, Count = g.Count() })
+            .ToListAsync();
+
+        var dict = counts
+            .GroupBy(c => c.AssignedUserId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.Status, x => x.Count));
+
+        return users.Select(u =>
+        {
+            dict.TryGetValue(u.UserId, out var statusCounts);
+            return new UserWithTaskCounts(
+                u.UserId,
+                u.Name,
+                u.IconPath,
+                statusCounts?.GetValueOrDefault(Models.TaskStatus.Todo) ?? 0,
+                statusCounts?.GetValueOrDefault(Models.TaskStatus.InProgress) ?? 0,
+                statusCounts?.GetValueOrDefault(Models.TaskStatus.Done) ?? 0
+            );
+        }).ToList();
+    }
+
     public async Task<User> AddAsync(User user)
     {
         _db.Users.Add(user);

@@ -5,7 +5,8 @@ namespace SmallTask.Services;
 public interface ILabelService
 {
     Task<Label?> GetByIdAsync(int labelId);
-    Task<IReadOnlyList<Label>> GetAllAsync();
-    Task<Label> CreateAsync(string name, string? description, string color);
+    Task<IReadOnlyList<Label>> GetAllAsync(int projectId);
+    Task<Label> CreateAsync(int projectId, string name, string? description, string color);
     Task UpdateAsync(int labelId, string name, string? description, string color);
+    Task DeleteAsync(int labelId);
 }

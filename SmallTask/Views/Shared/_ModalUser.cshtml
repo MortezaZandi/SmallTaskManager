@@ -7,13 +7,28 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="modalUserId" />
+                <input type="hidden" id="modalUserIconPath" />
                 <div class="mb-2">
                     <label class="form-label">Name</label>
                     <input type="text" class="form-control" id="modalUserName" />
                 </div>
                 <div class="mb-2">
-                    <label class="form-label">Icon path (optional)</label>
-                    <input type="text" class="form-control" id="modalUserIconPath" placeholder="/images/default-avatar.png" />
+                    <label class="form-label">Icon</label>
+                    <div class="d-flex flex-wrap gap-2 align-items-start">
+                        <div class="flex-shrink-0">
+                            <img id="modalUserIconPreview" src="/favicon.ico" alt="" class="rounded border" style="width:48px;height:48px;object-fit:cover;" onerror="this.src='/favicon.ico'" />
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex gap-1 mb-1">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="modalUserIconClear">None</button>
+                                <label class="btn btn-sm btn-outline-primary mb-0">
+                                    Upload new
+                                    <input type="file" id="modalUserIconUpload" accept="image/png,image/jpeg,image/gif,image/webp" class="d-none" />
+                                </label>
+                            </div>
+                            <div id="modalUserIconGrid" class="d-flex flex-wrap gap-1" style="max-height:120px;overflow-y:auto"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

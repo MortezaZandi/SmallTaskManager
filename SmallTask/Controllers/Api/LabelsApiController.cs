@@ -12,7 +12,7 @@ public class LabelsApiController : ControllerBase
     public LabelsApiController(ILabelService service) => _service = service;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync());
+    public async Task<IActionResult> GetAll([FromQuery] int projectId) => Ok(await _service.GetAllAsync(projectId));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id)
@@ -26,7 +26,7 @@ public class LabelsApiController : ControllerBase
     {
         try
         {
-            var l = await _service.CreateAsync(req.Name, req.Description, req.Color ?? "#000000");
+            var l = await _service.CreateAsync(req.ProjectId, req.Name, req.Description, req.Color ?? "#000000");
             return CreatedAtAction(nameof(Get), new { id = l.LabelId }, l);
         }
         catch (Exception ex)
@@ -48,10 +48,25 @@ public class LabelsApiController : ControllerBase
             return NotFound();
         }
     }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        try
+        {
+            await _service.DeleteAsync(id);
+            return NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
+    }
 }
 
 public class CreateLabelRequest
 {
+    public int ProjectId { get; set; }
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public string? Color { get; set; }

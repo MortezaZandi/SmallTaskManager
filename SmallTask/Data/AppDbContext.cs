@@ -23,6 +23,7 @@ namespace SmallTask.Data
                 e.HasKey(x => x.ProjectId);
                 e.Property(x => x.Name).HasMaxLength(200);
                 e.Property(x => x.Description).HasMaxLength(2000);
+                e.Property(x => x.IconPath).HasMaxLength(500);
             });
 
             modelBuilder.Entity<User>(e =>
@@ -36,6 +37,10 @@ namespace SmallTask.Data
             {
                 e.HasKey(x => x.GroupId);
                 e.Property(x => x.Name).HasMaxLength(200);
+                e.HasOne(x => x.Project)
+                    .WithMany(x => x.Groups)
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(x => x.ParentGroup)
                     .WithMany(x => x.Children)
                     .HasForeignKey(x => x.ParentGroupId)
@@ -48,6 +53,10 @@ namespace SmallTask.Data
                 e.Property(x => x.Name).HasMaxLength(100);
                 e.Property(x => x.Description).HasMaxLength(500);
                 e.Property(x => x.Color).HasMaxLength(20);
+                e.HasOne(x => x.Project)
+                    .WithMany(x => x.Labels)
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<TaskItem>(e =>

@@ -16,16 +16,16 @@ public class GroupService : IGroupService
 
     public async Task<Group?> GetByIdAsync(int groupId) => await _groupRepo.GetByIdAsync(groupId);
 
-    public async Task<IReadOnlyList<Group>> GetRootGroupsAsync() => await _groupRepo.GetRootGroupsAsync();
+    public async Task<IReadOnlyList<Group>> GetRootGroupsAsync(int projectId) => await _groupRepo.GetRootGroupsAsync(projectId);
 
-    public async Task<IReadOnlyList<Group>> GetChildrenAsync(int parentGroupId) =>
-        await _groupRepo.GetChildrenAsync(parentGroupId);
+    public async Task<IReadOnlyList<Group>> GetChildrenAsync(int projectId, int parentGroupId) =>
+        await _groupRepo.GetChildrenAsync(projectId, parentGroupId);
 
-    public async Task<IReadOnlyList<Group>> GetAllFlatAsync() => await _groupRepo.GetAllFlatAsync();
+    public async Task<IReadOnlyList<Group>> GetAllFlatAsync(int projectId) => await _groupRepo.GetAllFlatAsync(projectId);
 
-    public async Task<IReadOnlyList<GroupWithTaskCount>> GetAllWithTaskCountAsync(int? projectId = null)
+    public async Task<IReadOnlyList<GroupWithTaskCount>> GetAllWithTaskCountAsync(int projectId)
     {
-        var groups = await _groupRepo.GetAllFlatAsync();
+        var groups = await _groupRepo.GetAllFlatAsync(projectId);
         var result = new List<GroupWithTaskCount>();
         foreach (var g in groups)
         {
@@ -43,10 +43,11 @@ public class GroupService : IGroupService
         return result;
     }
 
-    public async Task<Group> CreateAsync(string name, int? parentGroupId = null)
+    public async Task<Group> CreateAsync(int projectId, string name, int? parentGroupId = null)
     {
         var group = new Group
         {
+            ProjectId = projectId,
             ParentGroupId = parentGroupId,
             Name = name,
             IsDeleted = false,
@@ -62,6 +63,7 @@ public class GroupService : IGroupService
         var g = new Group
         {
             GroupId = group.GroupId,
+            ProjectId = group.ProjectId,
             ParentGroupId = group.ParentGroupId,
             Name = name,
             IsDeleted = group.IsDeleted,
@@ -88,6 +90,7 @@ public class GroupService : IGroupService
         var g = new Group
         {
             GroupId = group.GroupId,
+            ProjectId = group.ProjectId,
             ParentGroupId = newParentGroupId,
             Name = group.Name,
             IsDeleted = group.IsDeleted,
@@ -105,6 +108,7 @@ public class GroupService : IGroupService
         var g = new Group
         {
             GroupId = group.GroupId,
+            ProjectId = group.ProjectId,
             ParentGroupId = group.ParentGroupId,
             Name = group.Name,
             IsDeleted = true,

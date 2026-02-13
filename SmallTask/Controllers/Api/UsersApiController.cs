@@ -14,6 +14,9 @@ public class UsersApiController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync());
 
+    [HttpGet("with-task-counts")]
+    public async Task<IActionResult> GetWithTaskCounts() => Ok(await _service.GetUsersWithTaskCountsAsync());
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id)
     {

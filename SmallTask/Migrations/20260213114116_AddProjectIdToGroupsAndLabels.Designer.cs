@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmallTask.Data;
 
@@ -11,9 +12,11 @@ using SmallTask.Data;
 namespace SmallTask.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260213114116_AddProjectIdToGroupsAndLabels")]
+    partial class AddProjectIdToGroupsAndLabels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -175,10 +178,6 @@ namespace SmallTask.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("IconPath")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");

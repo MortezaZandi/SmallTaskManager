@@ -12,7 +12,7 @@
     <div class="app-container">
         <header class="main-top-panel border-bottom bg-light px-3 py-2">
             <div class="d-flex align-items-center gap-3 flex-wrap">
-                <span class="fw-bold">SmallTask</span>
+                <div id="headerProjectBrand" class="d-flex align-items-center" style="min-width:32px;min-height:32px;"><span class="fw-bold">SmallTask</span></div>
                 <div class="d-flex align-items-center gap-2 flex" id="filterArea">
                     <select class="form-select form-select-sm" id="filterProject" style="max-width:160px"><option value="">All Projects</option></select>
                     <input type="text" class="form-control form-control-sm" id="filterText" placeholder="Text" style="max-width:140px" />
@@ -49,12 +49,12 @@
     @* Modals *@
     <partial name="_ModalProject" />
     <partial name="_ModalListProjects" />
-    <partial name="_ModalDeleteProject" />
     <partial name="_ModalGroup" />
     <partial name="_ModalListGroups" />
     <partial name="_ModalUser" />
     <partial name="_ModalTaskDetails" />
     <partial name="_ModalTask" />
+    <partial name="_ModalMoveTaskToProject" />
     <partial name="_ModalLabel" />
     <partial name="_ModalComment" />
     <partial name="_ModalListUsers" />

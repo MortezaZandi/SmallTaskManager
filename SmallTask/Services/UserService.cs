@@ -13,6 +13,9 @@ public class UserService : IUserService
 
     public async Task<IReadOnlyList<User>> GetAllAsync() => await _repo.GetAllAsync();
 
+    public async Task<IReadOnlyList<UserWithTaskCounts>> GetUsersWithTaskCountsAsync() =>
+        await _repo.GetUsersWithTaskCountsAsync();
+
     public async Task<User> CreateAsync(string name, string? iconPath = null)
     {
         var user = new User

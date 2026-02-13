@@ -13,8 +13,8 @@ public class GroupsApiController : ControllerBase
     public GroupsApiController(IGroupService service) => _service = service;
 
     [HttpGet("roots")]
-    public async Task<IActionResult> GetRoots() =>
-        Ok(await _service.GetRootGroupsAsync());
+    public async Task<IActionResult> GetRoots([FromQuery] int projectId) =>
+        Ok(await _service.GetRootGroupsAsync(projectId));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id)
@@ -24,15 +24,15 @@ public class GroupsApiController : ControllerBase
     }
 
     [HttpGet("{id:int}/children")]
-    public async Task<IActionResult> GetChildren(int id) =>
-        Ok(await _service.GetChildrenAsync(id));
+    public async Task<IActionResult> GetChildren(int id, [FromQuery] int projectId) =>
+        Ok(await _service.GetChildrenAsync(projectId, id));
 
     [HttpGet("flat")]
-    public async Task<IActionResult> GetAllFlat() =>
-        Ok(await _service.GetAllFlatAsync());
+    public async Task<IActionResult> GetAllFlat([FromQuery] int projectId) =>
+        Ok(await _service.GetAllFlatAsync(projectId));
 
     [HttpGet("with-task-count")]
-    public async Task<IActionResult> GetWithTaskCount([FromQuery] int? projectId) =>
+    public async Task<IActionResult> GetWithTaskCount([FromQuery] int projectId) =>
         Ok(await _service.GetAllWithTaskCountAsync(projectId));
 
     [HttpPost]
@@ -40,7 +40,7 @@ public class GroupsApiController : ControllerBase
     {
         try
         {
-            var g = await _service.CreateAsync(req.Name, req.ParentGroupId);
+            var g = await _service.CreateAsync(req.ProjectId, req.Name, req.ParentGroupId);
             return CreatedAtAction(nameof(Get), new { id = g.GroupId }, g);
         }
         catch (Exception ex)
@@ -98,6 +98,7 @@ public class GroupsApiController : ControllerBase
 
 public class CreateGroupRequest
 {
+    public int ProjectId { get; set; }
     public string Name { get; set; } = "";
     public int? ParentGroupId { get; set; }
 }

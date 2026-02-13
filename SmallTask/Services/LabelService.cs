@@ -11,11 +11,11 @@ public class LabelService : ILabelService
 
     public async Task<Label?> GetByIdAsync(int labelId) => await _repo.GetByIdAsync(labelId);
 
-    public async Task<IReadOnlyList<Label>> GetAllAsync() => await _repo.GetAllAsync();
+    public async Task<IReadOnlyList<Label>> GetAllAsync(int projectId) => await _repo.GetAllAsync(projectId);
 
-    public async Task<Label> CreateAsync(string name, string? description, string color)
+    public async Task<Label> CreateAsync(int projectId, string name, string? description, string color)
     {
-        var label = new Label { Name = name, Description = description, Color = color };
+        var label = new Label { ProjectId = projectId, Name = name, Description = description, Color = color };
         return await _repo.AddAsync(label);
     }
 
@@ -26,10 +26,18 @@ public class LabelService : ILabelService
         var l = new Label
         {
             LabelId = label.LabelId,
+            ProjectId = label.ProjectId,
             Name = name,
             Description = description,
             Color = color
         };
         await _repo.UpdateAsync(l);
+    }
+
+    public async Task DeleteAsync(int labelId)
+    {
+        var label = await _repo.GetByIdAsync(labelId);
+        if (label == null) throw new InvalidOperationException("Label not found.");
+        await _repo.DeleteAsync(labelId);
     }
 }

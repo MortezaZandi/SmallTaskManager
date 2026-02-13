@@ -13,8 +13,11 @@ public class LabelRepository : ILabelRepository
     public async Task<Label?> GetByIdAsync(int labelId) =>
         await _db.Labels.AsNoTracking().FirstOrDefaultAsync(x => x.LabelId == labelId);
 
-    public async Task<IReadOnlyList<Label>> GetAllAsync() =>
-        await _db.Labels.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
+    public async Task<IReadOnlyList<Label>> GetAllAsync(int projectId) =>
+        await _db.Labels.AsNoTracking()
+            .Where(x => x.ProjectId == projectId)
+            .OrderBy(x => x.Name)
+            .ToListAsync();
 
     public async Task<Label> AddAsync(Label label)
     {
@@ -27,5 +30,15 @@ public class LabelRepository : ILabelRepository
     {
         _db.Labels.Update(label);
         await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(int labelId)
+    {
+        var label = await _db.Labels.FindAsync(labelId);
+        if (label != null)
+        {
+            _db.Labels.Remove(label);
+            await _db.SaveChangesAsync();
+        }
     }
 }
