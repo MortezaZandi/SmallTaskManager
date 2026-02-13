@@ -27,7 +27,23 @@ body {
 
 .main-top-panel {
   flex-shrink: 0;
+  background-color: #4a4a4a;
+  color: #e0e0e0;
 }
+.main-top-panel .form-control,
+.main-top-panel .form-select { background-color: #3a3a3a; color: #fff; border-color: #555; }
+.main-top-panel .form-control::placeholder { color: #999; }
+.main-top-panel .btn-outline-secondary { border-color: #666; color: #e0e0e0; }
+.main-top-panel .btn-outline-secondary:hover { background-color: #555; border-color: #777; color: #fff; }
+.main-top-panel .btn-outline-primary { border-color: #5a9fd4; color: #7bb8e8; }
+.main-top-panel .btn-outline-primary:hover { background-color: #4a8fc4; border-color: #6ab0e4; color: #fff; }
+.main-top-panel .btn-primary { background-color: #5a9fd4; border-color: #5a9fd4; }
+.main-top-panel .btn-primary:hover { background-color: #4a8fc4; border-color: #4a8fc4; }
+.main-top-panel .dropdown-menu { background-color: #3a3a3a; border-color: #555; }
+.main-top-panel .dropdown-item { color: #e0e0e0; }
+.main-top-panel .dropdown-item:hover { background-color: #4a4a4a; color: #fff; }
+.main-top-panel .dropdown-toggle::after { border-top-color: #e0e0e0; }
+.main-top-panel #headerProjectBrand { color: #fff; }
 
 .main-body {
   flex: 1;
